@@ -1,0 +1,82 @@
+use manyhow::{manyhow, Emitter, ErrorMessage, Result, SilentError};
+use proc_macro::TokenStream;
+use proc_macro2::{Span, TokenStream as TokenStream2};
+use quote::quote;
+
+type SilentResult = Result<TokenStream2, SilentError>;
+
+#[manyhow(item_as_dummy)]
+#[proc_macro_attribute]
+pub fn attr_item_as_dummy(_input: TokenStream, _item: TokenStream) -> SilentResult {
+    Err(SilentError)
+}
+
+#[manyhow()]
+#[proc_macro_attribute]
+pub fn attr_no_dummy(_input: TokenStream, _item: TokenStream) -> SilentResult {
+    Err(SilentError)
+}
+
+#[manyhow()]
+#[proc_macro_attribute]
+pub fn attr_custom_dummy(
+    _input: TokenStream,
+    _item: TokenStream,
+    dummy: &mut TokenStream2,
+) -> SilentResult {
+    *dummy = quote! {fn dummy(){}};
+    Err(SilentError)
+}
+
+#[manyhow]
+#[proc_macro_attribute]
+pub fn attr_emit(_: TokenStream, _: TokenStream, emitter: &mut Emitter) -> TokenStream2 {
+    emitter.emit(ErrorMessage::new(Span::call_site(), "example error"));
+    quote! {fn output(){}}
+}
+
+#[manyhow(input_as_dummy)]
+#[proc_macro]
+pub fn input_as_dummy(_: TokenStream) -> SilentResult {
+    Err(SilentError)
+}
+
+#[manyhow]
+#[proc_macro]
+pub fn no_dummy(_: TokenStream) -> SilentResult {
+    Err(SilentError)
+}
+
+#[manyhow]
+#[proc_macro]
+pub fn custom_dummy(_: TokenStream, dummy: &mut TokenStream2) -> SilentResult {
+    *dummy = quote! {fn dummy(){}};
+    Err(SilentError)
+}
+
+#[manyhow]
+#[proc_macro]
+pub fn emit(_t: TokenStream, emitter: &mut Emitter) -> TokenStream2 {
+    emitter.emit(ErrorMessage::new(Span::call_site(), "example error"));
+    quote! {fn output(){}}
+}
+
+#[manyhow]
+#[proc_macro_derive(NoDummy)]
+pub fn derive_no_dummy(_: TokenStream) -> SilentResult {
+    Err(SilentError)
+}
+
+#[manyhow]
+#[proc_macro_derive(Dummy)]
+pub fn derive_dummy(_: TokenStream, dummy: &mut TokenStream2) -> SilentResult {
+    *dummy = quote! {fn dummy(){}};
+    Err(SilentError)
+}
+
+#[manyhow]
+#[proc_macro_derive(Emit)]
+pub fn derive_emit(_: TokenStream, emitter: &mut Emitter) -> TokenStream2 {
+    emitter.emit(ErrorMessage::new(Span::call_site(), "example error"));
+    quote! {fn output(){}}
+}

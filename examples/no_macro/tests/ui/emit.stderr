@@ -1,0 +1,25 @@
+error: example error
+ --> tests/ui/emit.rs:3:5
+  |
+3 |     #[attr_emit]
+  |     ^^^^^^^^^^^^
+  |
+  = note: this error originates in the attribute macro `attr_emit` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error: example error
+  --> tests/ui/emit.rs:8:5
+   |
+8  | /     emit!(
+9  | |         struct Struct;
+10 | |     );
+   | |_____^
+   |
+   = note: this error originates in the macro `emit` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error: example error
+  --> tests/ui/emit.rs:14:14
+   |
+14 |     #[derive(Emit)]
+   |              ^^^^
+   |
+   = note: this error originates in the derive macro `Emit` (in Nightly builds, run with -Z macro-backtrace for more info)
