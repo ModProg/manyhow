@@ -12,7 +12,7 @@ documentation = "https://docs.rs/manyhow"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-macros = { package = "manyhow-macros", path = "macros" }
+macros = { package = "manyhow-macros", path = "macros", version = "0.1.0" }
 proc-macro2 = "1"
 quote = "1"
 syn1 = { package = "syn", version = "1", default-features = false, optional = true, features = ["printing"] }
