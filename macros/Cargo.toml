@@ -1,21 +1,23 @@
 [package]
-categories = ["rust-patterns", "development-tools::procedural-macro-helpers"]
-description = "Clap for proc macro attributes"
-documentation = "https://docs.rs/attribute-derive"
-include = ["src/**/*", "LICENSE", "README.md"]
+name = "manyhow-macros"
+description = "Macro for manyhow"
+version = "0.1.1"
+edition = "2021"
+categories = ["development-tools::procedural-macro-helpers", "rust-patterns"]
 keywords = ["proc-macro", "error", "error-handling"]
 license = "MIT OR Apache-2.0"
 readme = "README.md"
-repository = "https://github.com/ModProg/attribute-derive"
-version = "0.1.1"
-edition = "2021"
-name = "manyhow-macros"
+repository = "https://github.com/ModProg/manyhow"
+documentation = "https://docs.rs/manyhow"
 
 [lib]
 proc-macro = true
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+proc-macro-utils = "0.5.2"
 proc-macro2 = "1"
 quote = "1"
-proc-macro-utils = "0.5.2"
+
+[package.metadata.release]
+tag = false
