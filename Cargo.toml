@@ -1,6 +1,6 @@
 [package]
 name = "manyhow"
-version = "0.1.1"
+version = "0.2.0"
 edition = "2021"
 categories = ["development-tools::procedural-macro-helpers", "rust-patterns"]
 description = "proc macro error handling à la anyhow x proc-macro-error"
