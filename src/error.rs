@@ -60,12 +60,6 @@ impl Error {
     pub fn push(&mut self, error: impl ToTokensError + 'static) {
         self.0.push(Box::new(error));
     }
-
-    /// Joins two `Error`s
-    pub fn join(mut self, error: impl ToTokensError + 'static) -> Self {
-        self.0.push(Box::new(error));
-        self
-    }
 }
 
 /// A single error message
@@ -264,6 +258,27 @@ pub trait ToTokensError: Debug {
         Self: Sized,
     {
         self.to_token_stream()
+    }
+}
+
+/// Allows to call `.join(..)` on any `impl ToTokensError`
+pub trait JoinToTokensError {
+    /// Joins two `Error`s
+    ///
+    /// ```
+    /// use manyhow::error_message;
+    /// # use crate::manyhow::JoinToTokensError;
+    ///
+    /// error_message!("test").join(error_message!("another"));
+    /// ```
+    fn join(self, error: impl ToTokensError + 'static) -> Error;
+}
+
+impl<T: Sized + ToTokensError + 'static> JoinToTokensError for T {
+    fn join(self, error: impl ToTokensError + 'static) -> Error {
+        let mut this = Error::from(self);
+        this.push(error);
+        this
     }
 }
 
