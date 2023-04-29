@@ -69,6 +69,14 @@ impl<T: SpanRanged> SpanRanged for &T {
     }
 }
 
+impl<T: SpanRanged> SpanRanged for Option<T> {
+    fn span_range(&self) -> Range<Span> {
+        self.as_ref()
+            .map_or_else(|| Span::call_site().span_range(), SpanRanged::span_range)
+    }
+}
+
+
 impl SpanRanged for Span {
     fn span_range(&self) -> Range<Span> {
         *self..*self
