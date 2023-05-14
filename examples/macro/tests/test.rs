@@ -1,4 +1,4 @@
-use example::*;
+use example_macro::*;
 
 #[test]
 fn attr() {

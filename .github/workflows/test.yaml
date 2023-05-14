@@ -45,12 +45,6 @@ jobs:
       - name: Test
         run:
           cargo test ${{ matrix.features }} --all-targets --no-fail-fast --workspace
-      - name: Test with macro
-        run:
-          cargo test --manifest-path examples/macro/Cargo.toml
-      - name: Test without macro
-        run:
-          cargo test --manifest-path examples/no_macro/Cargo.toml
       - name: Doc Test
         run:
           cargo test --all-features --doc --no-fail-fast --workspace

@@ -1,5 +1,5 @@
 [package]
-name = "example"
+name = "example-macro"
 version = "0.1.0"
 edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
@@ -14,4 +14,7 @@ quote = "1"
 syn = "2"
 
 [dev-dependencies]
-trybuild = "1"
+trybuild = "1.0.80"
+
+[package.metadata.release]
+release = false

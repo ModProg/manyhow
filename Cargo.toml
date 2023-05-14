@@ -11,6 +11,9 @@ repository = "https://github.com/ModProg/manyhow"
 documentation = "https://docs.rs/manyhow"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
+[workspace]
+members = [ "macros", ".", "examples/macro", "examples/no_macro" ]
+
 [dependencies]
 macros = { package = "manyhow-macros", path = "macros", version = "0.1.0" }
 proc-macro2 = "1"
@@ -23,12 +26,15 @@ default = ["syn"]
 syn = ["syn2"]
 
 [dev-dependencies]
-proc-macro-utils = "0.7.0"
+proc-macro-utils = "0.8.0"
 proc-macro2 = { version = "1", features = ["span-locations"] }
 
 [package.metadata.docs.rs]
 all-features = true
 rustdoc-args = ["--cfg", "docsrs"]
+
+[package.metadata.release]
+shared-version = true
 
 [[package.metadata.release.pre-release-replacements]]
 file = "CHANGELOG.md"
