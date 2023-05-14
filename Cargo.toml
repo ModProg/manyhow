@@ -1,6 +1,6 @@
 [package]
 name = "manyhow"
-version = "0.4.0"
+version = "0.4.1"
 edition = "2021"
 categories = ["development-tools::procedural-macro-helpers", "rust-patterns"]
 description = "proc macro error handling à la anyhow x proc-macro-error"
@@ -15,7 +15,7 @@ documentation = "https://docs.rs/manyhow"
 members = [ "macros", ".", "examples/macro", "examples/no_macro" ]
 
 [dependencies]
-macros = { package = "manyhow-macros", path = "macros", version = "0.1.0" }
+macros = { package = "manyhow-macros", path = "macros", version = "0.4.1" }
 proc-macro2 = "1"
 quote = "1"
 syn1 = { package = "syn", version = "1", default-features = false, optional = true, features = ["printing"] }
