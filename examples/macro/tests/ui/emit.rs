@@ -1,4 +1,4 @@
-use example::*;
+use example_macro::*;
 fn attr() {
     #[attr_emit]
     struct Struct;
