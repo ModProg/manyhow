@@ -80,3 +80,25 @@ pub fn derive_emit(_: TokenStream, emitter: &mut Emitter) -> TokenStream2 {
     emitter.emit(ErrorMessage::new(Span::call_site(), "example error"));
     quote! {fn output(){}}
 }
+
+#[manyhow(impl_fn)]
+#[proc_macro]
+pub fn impl_fn(input: TokenStream2) -> TokenStream2 {
+    input
+}
+
+#[test]
+fn unit_test() {
+    assert_eq!(impl_fn_impl(quote!(Hello World)).to_string(), "Hello World");
+}
+
+#[manyhow(impl_fn, input_as_dummy)]
+#[proc_macro]
+pub fn impl_fn_with_dummy(input: TokenStream2) -> TokenStream2 {
+    input
+}
+
+#[test]
+fn unit_test_with_dummy() {
+    assert_eq!(impl_fn_with_dummy_impl(quote!(Hello World)).to_string(), "Hello World");
+}

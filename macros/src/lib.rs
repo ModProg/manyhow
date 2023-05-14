@@ -2,7 +2,7 @@ use std::fmt::{Display, Write};
 
 use proc_macro2::{Span, TokenStream, TokenTree};
 use proc_macro_utils::{Delimited, TokenStream2Ext, TokenStreamExt};
-use quote::{quote, quote_spanned, ToTokens};
+use quote::{format_ident, quote, quote_spanned, ToTokens};
 
 #[derive(PartialEq, Eq, Clone, Copy)]
 enum ProcMacroType {
@@ -69,16 +69,17 @@ pub fn manyhow(
 
     // For now, we will keep all attributes on the outer function
     let mut typ = None;
-    while let Some(pound) = parser.next_pound() {
+    while let Some(pound) = parser.next_tt_pound() {
         output.extend(pound);
         let attribute_content = parser
             .next_bracketed()
             .expect("rust should only allow valid attributes");
-        output.extend(quote!( [#attribute_content] ));
         let ident = attribute_content
+            .stream()
             .parser()
             .next_ident()
             .expect("rust should only allow valid attributes");
+        output.push(attribute_content.into());
         match ident.to_string().as_str() {
             "proc_macro" => {
                 typ = Some(ProcMacroType::Function);
@@ -97,61 +98,68 @@ pub fn manyhow(
     };
 
     let mut as_dummy = false;
+    let mut impl_fn = false;
     let mut input = input.parser();
-    match input.next_ident() {
-        Some(ident) => match (ident.to_string().as_str(), typ) {
-            ("item_as_dummy", ProcMacroType::Attribute) => {
-                as_dummy = true;
-            }
-            ("item_as_dummy", ProcMacroType::Function) => {
+    while !input.is_empty() {
+        match input.next_ident() {
+            Some(ident) => match (ident.to_string().as_str(), typ) {
+                ("impl_fn", _) => {
+                    impl_fn = true;
+                }
+                ("item_as_dummy", ProcMacroType::Attribute) => {
+                    as_dummy = true;
+                }
+                ("item_as_dummy", ProcMacroType::Function) => {
+                    return with_helpful_error(
+                        item,
+                        ident.span(),
+                        format_args!(
+                            "`item_as_dummy` is only supported with `#[proc_macro_attribute]`"
+                        ),
+                        format_args!("try `#[manyhow(input_as_dummy)]` instead"),
+                    );
+                }
+                ("input_as_dummy", ProcMacroType::Function) => {
+                    as_dummy = true;
+                }
+                ("input_as_dummy", ProcMacroType::Attribute) => {
+                    return with_helpful_error(
+                        item,
+                        ident.span(),
+                        format_args!("`input_as_dummy` is only supported with `#[proc_macro]`"),
+                        "try `#[manyhow(item_as_dummy)]` instead",
+                    );
+                }
+                ("input_as_dummy" | "item_as_dummy", ProcMacroType::Derive) => {
+                    return with_helpful_error(
+                        item,
+                        ident.span(),
+                        format_args!(
+                            "only `#[proc_macro]` and `#[proc_macro_attribute]` support \
+                             `*_as_dummy` flags"
+                        ),
+                        "try `#[manyhow]` instead",
+                    );
+                }
+                _ => {
+                    return with_error(
+                        item,
+                        ident.span(),
+                        format_args!("only `{}` and `impl_fn` are supported", typ.dummy_flag(),),
+                    );
+                }
+            },
+            None if !input.is_empty() => {
                 return with_helpful_error(
                     item,
-                    ident.span(),
-                    format_args!(
-                        "`item_as_dummy` is only supported with `#[proc_macro_attribute]`"
-                    ),
-                    format_args!("try `#[manyhow(input_as_dummy)]` instead"),
+                    input.next().unwrap().span(),
+                    "manyhow expects a comma seperated list of flags",
+                    format_args!("try `#[manyhow({})]`", typ.dummy_flag()),
                 );
             }
-            ("input_as_dummy", ProcMacroType::Function) => {
-                as_dummy = true;
-            }
-            ("input_as_dummy", ProcMacroType::Attribute) => {
-                return with_helpful_error(
-                    item,
-                    ident.span(),
-                    format_args!("`input_as_dummy` is only supported with `#[proc_macro]`"),
-                    "try `#[manyhow(item_as_dummy)]` instead",
-                );
-            }
-            ("input_as_dummy" | "item_as_dummy", ProcMacroType::Derive) => {
-                return with_helpful_error(
-                    item,
-                    ident.span(),
-                    format_args!(
-                        "only `#[proc_macro]` and `#[proc_macro_attribute]` support `*_as_dummy` \
-                         flags"
-                    ),
-                    "try `#[manyhow]` instead",
-                );
-            }
-            _ => {
-                return with_error(
-                    item,
-                    ident.span(),
-                    format_args!("only `{}` is supported", typ.dummy_flag(),),
-                );
-            }
-        },
-        None if !input.is_empty() => {
-            return with_helpful_error(
-                item,
-                input.next().unwrap().span(),
-                "manyhow expects a comma seperated list of flags",
-                format_args!("try `#[manyhow({})]`", typ.dummy_flag()),
-            );
+            None => {}
         }
-        None => {}
+        _ = input.next_tt_comma();
     }
     // All attributes are parsed now there should only be a public function
 
@@ -168,10 +176,18 @@ pub fn manyhow(
             );
         }
     });
+    let Some(fn_name) = parser.next_ident() else {
+            return with_error(
+                item,
+                parser.next().as_ref().map_or_else(Span::call_site, TokenTree::span),
+                "expected function name",
+            );
+    };
+    let impl_fn = impl_fn.then(|| format_ident!("{fn_name}_impl"));
     // function name
-    output.push(parser.next().expect("function name"));
+    output.push(fn_name.into());
     // there should not be any generics
-    match parser.next_lt() {
+    match parser.next_tt_lt() {
         None => {}
         Some(lt) => {
             return with_error(
@@ -185,7 +201,7 @@ pub fn manyhow(
     // (...)
     let params = parser.next_group().expect("params");
     // ->
-    let Some(arrow) = parser.next_r_arrow() else {
+    let Some(arrow) = parser.next_tt_r_arrow() else {
         return with_helpful_error(item, params.span_close(), "expected return type", "try adding either `-> TokenStream` or `-> manyhow::Result`");
     };
     // return type
@@ -196,15 +212,24 @@ pub fn manyhow(
     let body = parser.next_group().expect("body");
     assert!(parser.is_empty(), "no tokens after function body");
 
+    let inner_impl_fn = if let Some(impl_fn) = &impl_fn {
+        quote!(let __implementation = #impl_fn;)
+    } else {
+        quote!(fn __implementation #params #arrow #ret_ty #body)
+    };
+
     quote! {
         {
-            fn __implementation #params #arrow #ret_ty #body
+            #inner_impl_fn
             let __as_dummy = #as_dummy;
             #typ
         }
     }
     .to_tokens(&mut output);
 
+    if let Some(impl_fn) = impl_fn {
+        quote!(fn #impl_fn #params #arrow #ret_ty #body).to_tokens(&mut output);
+    }
     output.into()
 }
 

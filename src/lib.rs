@@ -64,11 +64,33 @@
 //! [dummy](#dummy-mut-tokenstream) and/or [emitter](#emitter-mut-emitter) can
 //! be specified.
 //!
-//! The `manyhow` attribute takes one optional flag when used for `proc_macro`
-//! and `proc_macro_attribute`. `#[manyhow(input_as_dummy)]` will take the input
-//! of a function like `proc_macro` to initialize the [dummy `&mut
-//! TokenStream`](#dummy-mut-tokenstream) while `#[manyhow(item_as_dummy)]` on
+//! The `manyhow` attribute takes optional flags to configure its behavior.
+//!
+//! When used for `proc_macro` and `proc_macro_attribute`,
+//! `#[manyhow(input_as_dummy, ...)]` will take the input of a function like
+//! `proc_macro` to initialize the [dummy `&mut TokenStream`](#
+//! dummy-mut-tokenstream) while `#[manyhow(item_as_dummy, ...)]` on
 //! `proc_macro_attribute` will initialize the dummy with the annotated item.
+//!
+//! The `#[manyhow(impl_fn, ...)]` flag will put the acutal macro implementation
+//! in a seperate function. Making it availible for e.g. unit testing with
+//! [`proc_macro_utils::assert_expansion!`](https://docs.rs/proc-macro-utils/latest/proc_macro_utils/macro.assert_expansion.html).
+//!
+//! ```ignore
+//! #[manyhow(impl_fn)]
+//! #[proc_macro]
+//! pub fn actual_macro(input: TokenStream2) -> TokenStream2 {
+//!     // ...
+//! }
+//! // would expand to
+//! #[proc_macro]
+//! pub fn actual_macro(input: TokenStream) -> TokenStream {
+//!     actual_macro_impl(input.into()).into()
+//! }
+//! fn actual_macro_impl(input: TokenStream2) -> TokenStream2 {
+//!     // ...
+//! }
+//! ```
 //!
 //! # Without macros
 //! `manyhow` can be used without proc macros, and they can be disabled by

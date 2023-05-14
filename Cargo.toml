@@ -23,7 +23,7 @@ default = ["syn"]
 syn = ["syn2"]
 
 [dev-dependencies]
-proc-macro-utils = "0.5.1"
+proc-macro-utils = "0.7.0"
 proc-macro2 = { version = "1", features = ["span-locations"] }
 
 [package.metadata.docs.rs]
