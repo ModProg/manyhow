@@ -76,7 +76,6 @@ impl<T: SpanRanged> SpanRanged for Option<T> {
     }
 }
 
-
 impl SpanRanged for Span {
     fn span_range(&self) -> Range<Span> {
         *self..*self
@@ -142,6 +141,16 @@ pub trait ToTokensToSpanRange {
 impl<T: ToTokens> ToTokensToSpanRange for T {
     #[allow(non_snake_case)]
     fn FIRST_ARG_MUST_IMPLEMENT_SpanRanged_OR_ToTokens(&self) -> Range<Span> {
-        proc_macro::TokenStream::from(self.to_token_stream()).span_range()
+        let mut this = self.to_token_stream().into_iter();
+        let first = this
+            .next()
+            .as_ref()
+            .map_or_else(proc_macro2::Span::call_site, proc_macro2::TokenTree::span);
+
+        let last = this
+            .last()
+            .as_ref()
+            .map_or(first, proc_macro2::TokenTree::span);
+        first..last
     }
 }
