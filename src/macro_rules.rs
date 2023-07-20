@@ -259,8 +259,11 @@ mod test {
         emit!(emitter, "an error message"; error = "with attachments");
         let span = proc_macro2::Span::call_site();
         emit!(emitter, span, "error message");
-        let error = syn2::Error::new(proc_macro2::Span::call_site(), "an error");
-        emit!(emitter, error);
+        #[cfg(feature = "syn2")]
+        {
+            let error = syn2::Error::new(proc_macro2::Span::call_site(), "an error");
+            emit!(emitter, error);
+        }
     }
 
     // Only tests that it compiles

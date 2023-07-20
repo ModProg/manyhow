@@ -18,9 +18,6 @@ jobs:
         rust:
           - stable
           - nightly
-        features:
-          - ""
-          - --no-default-features
         include:
           - rust: nightly
             cargo_flags: -Z minimal-versions
@@ -39,15 +36,14 @@ jobs:
       - uses: hecrj/setup-rust-action@v1
         with:
           rust-version: ${{ matrix.rust }}
+      - uses: bruxisma/setup-cargo-hack@v1
+        with:
+          cargo-hack-version: "0.5"
       - name: Build
-        run:
-          cargo build ${{ matrix.features }} ${{ matrix.cargo_flags }}
+        run: cargo hack build --feature-powerset ${{ matrix.cargo_flags }}
       - name: Test
-        run:
-          cargo test ${{ matrix.features }} --all-targets --no-fail-fast --workspace
+        run: cargo hack test --feature-powerset --all-targets --no-fail-fast --workspace
       - name: Doc Test
-        run:
-          cargo test --all-features --doc --no-fail-fast --workspace
+        run: cargo test --all-features --doc --no-fail-fast --workspace
       - name: Build Docs
-        run:
-          cargo doc ${{ matrix.features }} --workspace --no-deps
+        run: cargo doc --all-features --workspace 
