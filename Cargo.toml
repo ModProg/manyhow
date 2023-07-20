@@ -20,10 +20,12 @@ proc-macro2 = "1.0.60"
 quote = "1"
 syn1 = { package = "syn", version = "1", default-features = false, optional = true, features = ["printing"] }
 syn2 = { package = "syn", version = "2", default-features = false, optional = true, features = ["printing"] }
+darling_core = { version = "0.20.1", optional = true }
 
 [features]
 default = ["syn"]
 syn = ["syn2"]
+darling = ["darling_core"]
 
 [dev-dependencies]
 proc-macro-utils = "0.8.0"

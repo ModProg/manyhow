@@ -10,6 +10,8 @@ use quote::{quote_spanned, ToTokens};
 use syn1::Error as Syn1Error;
 #[cfg(feature = "syn2")]
 use syn2::Error as Syn2Error;
+#[cfg(feature = "darling")]
+use darling_core::Error as DarlingError;
 
 #[cfg(doc)]
 use crate::MacroHandler;
@@ -36,6 +38,12 @@ impl From<Syn1Error> for Error {
 #[cfg(feature = "syn2")]
 impl From<Syn2Error> for Error {
     fn from(error: Syn2Error) -> Self {
+        Self::from(error)
+    }
+}
+#[cfg(feature = "darling")]
+impl From<DarlingError> for Error {
+    fn from(error: DarlingError) -> Self {
         Self::from(error)
     }
 }
@@ -325,6 +333,12 @@ impl ToTokensError for Syn1Error {
 impl ToTokensError for Syn2Error {
     fn to_tokens(&self, tokens: &mut TokenStream) {
         self.to_compile_error().to_tokens(tokens);
+    }
+}
+#[cfg(feature = "darling")]
+impl ToTokensError for DarlingError {
+    fn to_tokens(&self, tokens: &mut TokenStream) {
+        self.clone().write_errors().to_tokens(tokens);
     }
 }
 impl ToTokensError for Error {
