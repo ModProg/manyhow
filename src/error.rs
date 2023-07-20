@@ -1,6 +1,7 @@
 #![allow(clippy::missing_errors_doc)]
 use std::convert::Infallible;
 use std::fmt::{Debug, Display};
+use std::mem;
 use std::ops::Range;
 
 use proc_macro2::{Span, TokenStream};
@@ -185,7 +186,7 @@ impl ErrorMessage {
 }
 
 /// Exposes [`ErrorMessage::attachment`] as a trait to allow
-/// [`ResultExt::attachment`]
+/// [`ResultExt::attachment`].
 pub trait Attachment: Sized {
     /// Attaches an additional message to `self` reusing the same
     /// span, and the specified `label`.
@@ -200,10 +201,15 @@ impl Attachment for ErrorMessage {
     }
 }
 
-/// Allows emitting errors without returning
+/// Allows emitting errors without returning.
+#[derive(Default, Debug)]
 pub struct Emitter(Vec<Box<dyn ToTokensError>>);
+
 impl Emitter {
-    pub(crate) fn new() -> Self {
+    /// Creates an `Emitter`, this can be used to collect errors than can later
+    /// be converted with [`Emitter::into_result()`].
+    #[must_use]
+    pub fn new() -> Self {
         Emitter(Vec::new())
     }
 
@@ -229,12 +235,16 @@ impl Emitter {
         self.0.clear();
     }
 
-    /// Errors if not [`Self::is_empty`]
-    pub fn fail_if_dirty(&self) -> Result<(), SilentError> {
+    /// Returns emitted errors if not [`Self::is_empty`].
+    ///
+    /// If no errors where emitted, returns `Ok(())`.
+    ///
+    /// *Note:* This clears the emitter to avoid returning duplicate errors.
+    pub fn into_result(&mut self) -> Result<(), Error> {
         if self.is_empty() {
             Ok(())
         } else {
-            Err(SilentError)
+            Err(Error(mem::take(&mut self.0)))
         }
     }
 }

@@ -4,10 +4,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-<!-- ## [Unreleased] -->
+## [Unreleased]
+### Added
+- `Emitter::new()` and `Emitter::into_error()` to enable using the Emitter manually.
+
+### Changed
+- **Breaking Change** replaced `Emitter::fail_if_dirty` with `Emitter::into_result`.
+
 ## [0.4.2] - 2023-05-15
 ### Fixed
-- `ToTokens`' SpanRange conversion should work without `proc_macro`.
+- `ToTokens`' `SpanRange` conversion should work without `proc_macro`.
 
 ## [0.4.1] - 2023-05-14
 ### Fixed

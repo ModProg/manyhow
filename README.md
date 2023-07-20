@@ -13,9 +13,9 @@ development, especially focused on the error handling.
 ## Motivation
 Error handling in proc-macros is unideal, as the top level functions of proc
 macros can only return `TokenStreams` both in success and failure case. This
-means that I often write code like this, moving the actual impelemtation in
-a seperate function to be able to use the ergonomic rust error handling with
-e.g. `?`.
+means that I often write code like this, moving the actual implementation in
+a separate function to be able to use the ergonomic rust error handling with
+e.g., `?`.
 ```rust
 use proc_macro2::TokenStream as TokenStream2;
                                                                                            
@@ -34,7 +34,7 @@ fn actual_implementation(input: TokenStream2) -> syn::Result<TokenStream2> {
 ```
 
 ## Using the `#[manyhow]` macro
-To activate the error hadling, just add `#[manyhow]` above any
+To activate the error handling, just add `#[manyhow]` above any
 proc macro implementation, reducing the above example to:
 
 ```rust
@@ -53,7 +53,7 @@ hood.
 
 A proc macro function marked as `#[manyhow]` can take and return any
 `TokenStream` and can also return `Result<TokenStream,
-E>` where `E` implments `ToTokensError`. As additional paramters a
+E>` where `E` implements `ToTokensError`. As additional parameters a
 [dummy](#dummy-mut-tokenstream) and/or [emitter](#emitter-mut-emitter) can
 be specified.
 
@@ -95,9 +95,9 @@ input/item will be used as initial dummy.
 ## `emitter: &mut Emitter`
 `MacroHandler`s (the trait defining what closures/functions can be used
 with `manyhow`) can take a mutable reference to an `Emitter`. This
-allows to collect errors, but not fail imidiatly.
+allows to collect errors, but not fail immediately.
 
-`Emitter::fail_if_dirty` can be used to return if an `Emitter` contains
+`Emitter::into_result` can be used to return if an `Emitter` contains
 any values.
 
 ```rust
@@ -109,7 +109,7 @@ use proc_macro2::TokenStream as TokenStream2;
 fn my_macro(input: TokenStream2, emitter: &mut Emitter) -> manyhow::Result<TokenStream2> {
     // ..
     emitter.emit(ErrorMessage::call_site("A fun error!"));
-    emitter.fail_if_dirty()?;
+    emitter.into_result()?;
     // ..
 }
 ```
@@ -118,5 +118,5 @@ fn my_macro(input: TokenStream2, emitter: &mut Emitter) -> manyhow::Result<Token
 `MacroHandler`s also take a mutable reference to a `TokenStream`, to
 enable emitting some dummy code to be used in case the macro errors.
 
-This allows either appending tokens e.g. with `ToTokens::to_tokens` or
-directly setting the dummy code e.g. `*dummy = quote!{some tokens}`.
+This allows either appending tokens e.g., with `ToTokens::to_tokens` or
+directly setting the dummy code e.g., `*dummy = quote!{some tokens}`.

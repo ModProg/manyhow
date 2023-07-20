@@ -9,9 +9,9 @@
 //! # Motivation
 //! Error handling in proc-macros is unideal, as the top level functions of proc
 //! macros can only return `TokenStreams` both in success and failure case. This
-//! means that I often write code like this, moving the actual impelemtation in
-//! a seperate function to be able to use the ergonomic rust error handling with
-//! e.g. `?`.
+//! means that I often write code like this, moving the actual implementation in
+//! a separate function to be able to use the ergonomic rust error handling with
+//! e.g., `?`.
 //! ```
 //! # use proc_macro2::TokenStream;
 //! # use quote::quote;
@@ -60,7 +60,7 @@
 //!
 //! A proc macro function marked as `#[manyhow]` can take and return any
 //! [`TokenStream`](AnyTokenStream), and can also return `Result<TokenStream,
-//! E>` where `E` implments [`ToTokensError`]. As additional paramters a
+//! E>` where `E` implments [`ToTokensError`]. As additional parameters a
 //! [dummy](#dummy-mut-tokenstream) and/or [emitter](#emitter-mut-emitter) can
 //! be specified.
 //!
@@ -72,8 +72,8 @@
 //! dummy-mut-tokenstream) while `#[manyhow(item_as_dummy, ...)]` on
 //! `proc_macro_attribute` will initialize the dummy with the annotated item.
 //!
-//! The `#[manyhow(impl_fn, ...)]` flag will put the acutal macro implementation
-//! in a seperate function. Making it availible for e.g. unit testing with
+//! The `#[manyhow(impl_fn, ...)]` flag will put the actual macro implementation
+//! in a separate function. Making it available for e.g., unit testing with
 //! [`proc_macro_utils::assert_expansion!`](https://docs.rs/proc-macro-utils/latest/proc_macro_utils/macro.assert_expansion.html).
 //!
 //! ```ignore
@@ -130,9 +130,9 @@
 //! # `emitter: &mut Emitter`
 //! [`MacroHandler`]s (the trait defining what closures/functions can be used
 //! with `manyhow`) can take a mutable reference to an [`Emitter`]. This
-//! allows to collect errors, but not fail imidiatly.
+//! allows collecting errors, but not fail immediately.
 //!
-//! [`Emitter::fail_if_dirty`] can be used to return if an [`Emitter`] contains
+//! [`Emitter::into_result`] can be used to return if an [`Emitter`] contains
 //! any values.
 //!
 //! ```
@@ -148,7 +148,7 @@
 //! fn my_macro(input: TokenStream2, emitter: &mut Emitter) -> manyhow::Result<TokenStream2> {
 //!     // ..
 //!     emitter.emit(ErrorMessage::call_site("A fun error!"));
-//!     emitter.fail_if_dirty()?;
+//!     emitter.into_result()?;
 //!     // ..
 //! #   Ok(quote!())
 //! }
@@ -158,8 +158,8 @@
 //! [`MacroHandler`]s also take a mutable reference to a `TokenStream`, to
 //! enable emitting some dummy code to be used in case the macro errors.
 //!
-//! This allows either appending tokens e.g. with [`ToTokens::to_tokens`] or
-//! directly setting the dummy code e.g. `*dummy = quote!{some tokens}`.
+//! This allows either appending tokens e.g., with [`ToTokens::to_tokens`] or
+//! directly setting the dummy code e.g., `*dummy = quote!{some tokens}`.
 
 use std::convert::Infallible;
 
