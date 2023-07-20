@@ -165,6 +165,7 @@
 //!
 //! - `syn`/`syn2` **default** Enables errors for [`syn` 2.x](https://docs.rs/syn/latest/syn/).
 //! - `syn1` Enables errors for [`syn` 1.x](https://docs.rs/syn/1.0.109/syn/index.html).
+//! - `darling` Enables erros for [`darling`](https://docs.rs/darling/latest/index.html).
 
 use std::convert::Infallible;
 
@@ -442,7 +443,7 @@ pub fn function<
 pub trait MacroHandler<Input, Output, Function, Error = Infallible> {
     #[allow(clippy::missing_errors_doc, missing_docs)]
     fn call(self, input: Input, dummy: &mut Output, emitter: &mut Emitter)
-    -> Result<Output, Error>;
+        -> Result<Output, Error>;
 }
 
 macro_rules! impl_attribute_macro {
