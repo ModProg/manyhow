@@ -53,7 +53,7 @@ macro_rules! __error_message_internal {
 ///
 /// If the first argument is not a literal it is taken as the span of the error.
 /// The span expression can **either** implement [`SpanRanged`] or implement
-/// [`ToTokens`]. Otherwise [`Span::call_site`] is used.
+/// [`ToTokens`]. Otherwise, [`Span::call_site`] is used.
 ///
 /// ```
 /// # use proc_macro2::Span;
@@ -109,7 +109,6 @@ macro_rules! error_message {
     };
 }
 
-#[macro_export]
 /// Exit by returning error, matching [`anyhow::bail!`](https://docs.rs/anyhow/latest/anyhow/macro.bail.html)
 ///
 /// The syntax is identical to [`error_message!`], the only difference is, that
@@ -124,6 +123,7 @@ macro_rules! error_message {
 /// let error = syn::Error::new(Span::call_site(), "an error");
 /// # Ok::<_, manyhow::Error>(())
 /// ```
+#[macro_export]
 macro_rules! bail {
     ($msg:literal) => {
         return ::core::result::Result::Err($crate::error_message!($msg).into());
@@ -136,12 +136,59 @@ macro_rules! bail {
     };
 }
 
+/// Push an error to an emitter.
+///
+/// The syntax is identical to [`error_message!`] and [`bail!`], but the first
+/// argument is the [`Emitter`].
+/// ```
+/// # use manyhow::{emit, Emitter};
+/// # use proc_macro2::Span;
+/// # use syn2 as syn;
+/// let mut emitter = Emitter::new();
+/// emit!(emitter, "an error message");
+/// emit!(emitter, "an error message"; error = "with attachments");
+/// let span = Span::call_site();
+/// emit!(emitter, span, "error message");
+/// let error = syn::Error::new(Span::call_site(), "an error");
+/// emit!(emitter, error);
+/// ```
+///
+/// It can also be used with [`Error`].
+/// ```
+/// # use manyhow::{emit, error_message, Error};
+/// # use proc_macro2::Span;
+/// # use syn2 as syn;
+/// let mut error: Error = error_message!("initial error").into();
+/// emit!(error, "an error message");
+/// ```
+///
+/// Or any collection implementing [`Extend`].
+/// ```
+/// # use manyhow::emit;
+/// # use proc_macro2::Span;
+/// # use syn2 as syn;
+/// let mut errors = Vec::new();
+/// emit!(errors, "an error message");
+/// ```
+#[macro_export]
+macro_rules! emit {
+    ($emitter:expr, $msg:literal) => {
+        $emitter.extend(::core::iter::once::<$crate::ErrorMessage>($crate::error_message!($msg)));
+    };
+    ($emitter:expr, $error:expr) => {
+        $emitter.extend(::core::iter::once($error));
+    };
+    ($emitter:expr, $($tt:tt)*) => {
+        $emitter.extend(::core::iter::once::<$crate::ErrorMessage>($crate::error_message!($($tt)*).into()));
+    };
+}
+
 #[cfg(test)]
 mod test {
     use proc_macro::Span;
     use quote::quote;
 
-    use crate::ErrorMessage;
+    use crate::{Emitter, ErrorMessage};
 
     macro_rules! returned {
         ($ty:ty, $expr:expr) => {
@@ -204,6 +251,16 @@ mod test {
             .to_string(),
             "test\n\n  = error: hello 5 \n  = hint: a hint\n"
         );
+    }
+
+    #[test]
+    fn emit() {
+        let mut emitter = Emitter::new();
+        emit!(emitter, "an error message"; error = "with attachments");
+        let span = proc_macro2::Span::call_site();
+        emit!(emitter, span, "error message");
+        let error = syn2::Error::new(proc_macro2::Span::call_site(), "an error");
+        emit!(emitter, error);
     }
 
     // Only tests that it compiles

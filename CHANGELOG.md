@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 ### Added
 - `Emitter::new()` and `Emitter::into_error()` to enable using the Emitter manually.
+- Implemented `Extend` for `Emitter` and `Error`.
+- Added `emit!` macro for adding errors to `Emitter`.
 
 ### Changed
 - **Breaking Change** replaced `Emitter::fail_if_dirty` with `Emitter::into_result`.

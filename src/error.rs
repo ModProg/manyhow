@@ -63,6 +63,15 @@ impl Error {
     }
 }
 
+impl<I: ToTokensError + 'static> Extend<I> for Error {
+    fn extend<T: IntoIterator<Item = I>>(&mut self, iter: T) {
+        self.0.extend(
+            iter.into_iter()
+                .map(|i| Box::new(i) as Box<dyn ToTokensError>),
+        );
+    }
+}
+
 /// A single error message
 ///
 /// Can take additional attachments like [`help`](Self::help) or
@@ -246,6 +255,15 @@ impl Emitter {
         } else {
             Err(Error(mem::take(&mut self.0)))
         }
+    }
+}
+
+impl<I: ToTokensError + 'static> Extend<I> for Emitter {
+    fn extend<T: IntoIterator<Item = I>>(&mut self, iter: T) {
+        self.0.extend(
+            iter.into_iter()
+                .map(|i| Box::new(i) as Box<dyn ToTokensError>),
+        );
     }
 }
 
