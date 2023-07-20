@@ -160,6 +160,11 @@
 //!
 //! This allows either appending tokens e.g., with [`ToTokens::to_tokens`] or
 //! directly setting the dummy code e.g., `*dummy = quote!{some tokens}`.
+//!
+//! # Crate features
+//!
+//! - `syn`/`syn2` **default** Enables errors for [`syn` 2.x](https://docs.rs/syn/latest/syn/).
+//! - `syn1` Enables errors for [`syn` 1.x](https://docs.rs/syn/1.0.109/syn/index.html).
 
 use std::convert::Infallible;
 
