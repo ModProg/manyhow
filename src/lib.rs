@@ -72,6 +72,9 @@
 //! dummy-mut-tokenstream) while `#[manyhow(item_as_dummy, ...)]` on
 //! `proc_macro_attribute` will initialize the dummy with the annotated item.
 //!
+//! You can merge the `#[proc_macro*]` attribute inside the manyhow flags e.g.,
+//! `#[manyhow(proc_macro)]` or `#[manyhow(proc_macro_derive(SomeTrait, ...))]`.
+//!
 //! The `#[manyhow(impl_fn, ...)]` flag will put the actual macro implementation
 //! in a separate function. Making it available for e.g., unit testing with
 //! [`proc_macro_utils::assert_expansion!`](https://docs.rs/proc-macro-utils/latest/proc_macro_utils/macro.assert_expansion.html).
@@ -443,7 +446,7 @@ pub fn function<
 pub trait MacroHandler<Input, Output, Function, Error = Infallible> {
     #[allow(clippy::missing_errors_doc, missing_docs)]
     fn call(self, input: Input, dummy: &mut Output, emitter: &mut Emitter)
-        -> Result<Output, Error>;
+    -> Result<Output, Error>;
 }
 
 macro_rules! impl_attribute_macro {

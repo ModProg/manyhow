@@ -35,6 +35,16 @@ pub fn attr_emit(_: TokenStream, _: TokenStream, emitter: &mut Emitter) -> Token
     quote! {fn output(){}}
 }
 
+#[manyhow(proc_macro_attribute)]
+pub fn attr_flag(_input: TokenStream, _item: TokenStream) -> SilentResult {
+    Err(SilentError)
+}
+
+#[manyhow(proc_macro_attribute, item_as_dummy)]
+pub fn attr_flag_dummy(_input: TokenStream, _item: TokenStream) -> SilentResult {
+    Err(SilentError)
+}
+
 #[manyhow(input_as_dummy)]
 #[proc_macro]
 pub fn input_as_dummy(_: TokenStream) -> SilentResult {
@@ -61,6 +71,11 @@ pub fn emit(_t: TokenStream, emitter: &mut Emitter) -> TokenStream2 {
     quote! {fn output(){}}
 }
 
+#[manyhow(proc_macro)]
+pub fn flag(_: TokenStream) -> SilentResult {
+    Err(SilentError)
+}
+
 #[manyhow]
 #[proc_macro_derive(NoDummy)]
 pub fn derive_no_dummy(_: TokenStream) -> SilentResult {
@@ -79,6 +94,11 @@ pub fn derive_dummy(_: TokenStream, dummy: &mut TokenStream2) -> SilentResult {
 pub fn derive_emit(_: TokenStream, emitter: &mut Emitter) -> TokenStream2 {
     emitter.emit(ErrorMessage::new(Span::call_site(), "example error"));
     quote! {fn output(){}}
+}
+
+#[manyhow(proc_macro_derive(Flag))]
+pub fn derive_flag(_: TokenStream) -> SilentResult {
+    Err(SilentError)
 }
 
 #[manyhow(impl_fn)]
@@ -100,5 +120,8 @@ pub fn impl_fn_with_dummy(input: TokenStream2) -> TokenStream2 {
 
 #[test]
 fn unit_test_with_dummy() {
-    assert_eq!(impl_fn_with_dummy_impl(quote!(Hello World)).to_string(), "Hello World");
+    assert_eq!(
+        impl_fn_with_dummy_impl(quote!(Hello World)).to_string(),
+        "Hello World"
+    );
 }

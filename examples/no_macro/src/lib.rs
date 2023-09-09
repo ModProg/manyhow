@@ -89,6 +89,15 @@ pub fn emit(input: TokenStream) -> TokenStream {
     )
 }
 
+#[proc_macro]
+pub fn no_closure(input: TokenStream) -> TokenStream {
+    function(input, true, no_closure_impl)
+}
+
+fn no_closure_impl(_: TokenStream2) -> SilentResult {
+    Err(SilentError)
+}
+
 #[proc_macro_derive(NoDummy)]
 pub fn derive_no_dummy(item: TokenStream) -> TokenStream {
     derive(item, |_: TokenStream2| -> SilentResult { Err(SilentError) })

@@ -4,7 +4,7 @@ use proc_macro2::Span;
 use quote::ToTokens;
 
 #[cfg(doc)]
-use crate::{ErrorMessage, SpanRanged};
+use crate::{Emitter, Error, ErrorMessage, SpanRanged};
 
 #[doc(hidden)]
 #[macro_export]

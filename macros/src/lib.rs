@@ -1,6 +1,6 @@
 use std::fmt::{Display, Write};
 
-use proc_macro2::{Span, TokenStream, TokenTree};
+use proc_macro2::{Group, Ident, Span, TokenStream, TokenTree};
 use proc_macro_utils::{Delimited, TokenStream2Ext, TokenStreamExt};
 use quote::{format_ident, quote, quote_spanned, ToTokens};
 
@@ -55,6 +55,31 @@ impl ToTokens for ProcMacroType {
     }
 }
 
+enum Param {
+    Flag(Ident),
+    Complex(Ident, Group),
+}
+
+impl Param {
+    fn span(&self) -> Span {
+        self.ident().span()
+    }
+
+    fn ident(&self) -> &Ident {
+        let (Param::Flag(ident) | Param::Complex(ident, _)) = self;
+        ident
+    }
+}
+
+impl Display for Param {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Param::Flag(ident) => ident.fmt(f),
+            Param::Complex(ident, tokens) => ident.fmt(f).and(tokens.fmt(f)),
+        }
+    }
+}
+
 /// Attribute macro to remove boiler plate from proc macro entry points.
 ///
 /// See [the documentation at the crate root for more
@@ -68,7 +93,35 @@ pub fn manyhow(
     let mut output = TokenStream::default();
 
     // For now, we will keep all attributes on the outer function
-    let mut typ = None;
+    let mut kind = None;
+    let mut kind_attribute = None;
+    let mut set_kind = |ident: &Ident, create_attribute: bool| {
+        let new_kind = match ident.to_string().as_str() {
+            "proc_macro" => ProcMacroType::Function,
+            "proc_macro_attribute" => ProcMacroType::Attribute,
+            "proc_macro_derive" => ProcMacroType::Derive,
+            _ => return Ok(()),
+        };
+        if let Some((_, span)) = kind {
+            Err(with_helpful_error(
+                with_helpful_error(
+                    item.clone(),
+                    span,
+                    "proc_macro kind specified multiple times",
+                    "try removing this",
+                ),
+                ident.span(),
+                "proc_macro kind specified multiple times",
+                "try removing this",
+            ))
+        } else {
+            kind = Some((new_kind, ident.span()));
+            if create_attribute {
+                kind_attribute = Some(quote!(#[#ident]));
+            }
+            Ok(())
+        }
+    };
     while let Some(pound) = parser.next_tt_pound() {
         output.extend(pound);
         let attribute_content = parser
@@ -80,86 +133,131 @@ pub fn manyhow(
             .next_ident()
             .expect("rust should only allow valid attributes");
         output.push(attribute_content.into());
-        match ident.to_string().as_str() {
-            "proc_macro" => {
-                typ = Some(ProcMacroType::Function);
-            }
-            "proc_macro_attribute" => {
-                typ = Some(ProcMacroType::Attribute);
-            }
-            "proc_macro_derive" => {
-                typ = Some(ProcMacroType::Derive);
-            }
-            _ => {}
+        if let Err(err) = set_kind(&ident, false) {
+            return err;
         }
     }
-    let Some(typ) = typ else {
-        return with_helpful_error(item, Span::call_site(), "expected proc_macro* attribute below `#[manyhow]`", "try adding `#[proc_macro]`, `#[proc_macro_attribute]` or `#[proc_macro_derive]` below `#[manyhow]`");
+
+    let mut flags = Vec::new();
+    let mut input = input.parser();
+    while !input.is_empty() {
+        let Some(ident) = input.next_ident() else {
+            return with_helpful_error(
+                item,
+                input.next().unwrap().span(),
+                "manyhow expects a comma seperated list of flags",
+                format_args!("try `#[manyhow(impl_fn)]`"),
+            );
+        };
+        if ident == "proc_macro_derive" {
+            let Some(group) = input.next_group() else {
+                return with_helpful_error(
+                    item,
+                    input.next().unwrap_or(ident.into()).span(),
+                    "`proc_macro_derive` expects `(TraitName)`",
+                    format_args!("try `#[manyhow(proc_macro_derive(YourTraitName))]`"),
+                );
+            };
+            // We set it manually here
+            if let Err(error) = set_kind(&ident, false) {
+                return error;
+            }
+            quote!(#[#ident #group]).to_tokens(&mut output);
+            flags.push(Param::Complex(ident, group));
+        } else {
+            if let Err(error) = set_kind(&ident, true) {
+                return error;
+            }
+            flags.push(Param::Flag(ident));
+        }
+        // This technically allows `flag flag flag` but it's fine IMO
+        _ = input.next_tt_comma();
+    }
+
+    output.extend(kind_attribute);
+
+    let Some((kind, _)) = kind else {
+        return with_helpful_error(
+            item,
+            Span::call_site(),
+            "expected proc_macro* attribute below `#[manyhow]` or a flag as parameter of the \
+             attribute",
+            "try adding `#[proc_macro]`, `#[proc_macro_attribute]`, or `#[proc_macro_derive]` \
+             below `#[manyhow]` or adding a flag to `#[manyhow]`, i.e., `#[manyhow(proc_macro)]`, \
+             `#[manyhow(proc_macro_attribute)]` or `#[manyhow(proc_macro_derive)]` ",
+        );
+    };
+
+    let flags_replace = |i: usize, replacement: Option<&str>| {
+        let mut flags = flags.iter().map(ToString::to_string).collect::<Vec<_>>();
+        if let Some(replacement) = replacement {
+            flags[i] = replacement.to_owned();
+        } else {
+            flags.remove(i);
+        }
+        if flags.is_empty() {
+            "".to_owned()
+        } else {
+            format!("({})", flags.join(", "))
+        }
     };
 
     let mut as_dummy = false;
     let mut impl_fn = false;
-    let mut input = input.parser();
-    while !input.is_empty() {
-        match input.next_ident() {
-            Some(ident) => match (ident.to_string().as_str(), typ) {
-                ("impl_fn", _) => {
-                    impl_fn = true;
-                }
-                ("item_as_dummy", ProcMacroType::Attribute) => {
-                    as_dummy = true;
-                }
-                ("item_as_dummy", ProcMacroType::Function) => {
-                    return with_helpful_error(
-                        item,
-                        ident.span(),
-                        format_args!(
-                            "`item_as_dummy` is only supported with `#[proc_macro_attribute]`"
-                        ),
-                        format_args!("try `#[manyhow(input_as_dummy)]` instead"),
-                    );
-                }
-                ("input_as_dummy", ProcMacroType::Function) => {
-                    as_dummy = true;
-                }
-                ("input_as_dummy", ProcMacroType::Attribute) => {
-                    return with_helpful_error(
-                        item,
-                        ident.span(),
-                        format_args!("`input_as_dummy` is only supported with `#[proc_macro]`"),
-                        "try `#[manyhow(item_as_dummy)]` instead",
-                    );
-                }
-                ("input_as_dummy" | "item_as_dummy", ProcMacroType::Derive) => {
-                    return with_helpful_error(
-                        item,
-                        ident.span(),
-                        format_args!(
-                            "only `#[proc_macro]` and `#[proc_macro_attribute]` support \
-                             `*_as_dummy` flags"
-                        ),
-                        "try `#[manyhow]` instead",
-                    );
-                }
-                _ => {
-                    return with_error(
-                        item,
-                        ident.span(),
-                        format_args!("only `{}` and `impl_fn` are supported", typ.dummy_flag(),),
-                    );
-                }
-            },
-            None if !input.is_empty() => {
+    for (i, param) in flags.iter().enumerate() {
+        match (param.ident().to_string().as_str(), kind) {
+            ("impl_fn", _) => impl_fn = true,
+            ("item_as_dummy", ProcMacroType::Attribute) => as_dummy = true,
+            ("item_as_dummy", ProcMacroType::Function) => {
                 return with_helpful_error(
                     item,
-                    input.next().unwrap().span(),
-                    "manyhow expects a comma seperated list of flags",
-                    format_args!("try `#[manyhow({})]`", typ.dummy_flag()),
+                    param.span(),
+                    format_args!(
+                        "`item_as_dummy` is only supported with `#[proc_macro_attribute]`"
+                    ),
+                    format_args!(
+                        "try `#[manyhow{}]` instead",
+                        flags_replace(i, Some("input_as_dummy"))
+                    ),
                 );
             }
-            None => {}
+            ("input_as_dummy", ProcMacroType::Function) => as_dummy = true,
+            ("input_as_dummy", ProcMacroType::Attribute) => {
+                return with_helpful_error(
+                    item,
+                    param.span(),
+                    format_args!("`input_as_dummy` is only supported with `#[proc_macro]`"),
+                    format_args!(
+                        "try `#[manyhow{}]` instead",
+                        flags_replace(i, Some("item_as_dummy"))
+                    ),
+                );
+            }
+            ("input_as_dummy" | "item_as_dummy", ProcMacroType::Derive) => {
+                return with_helpful_error(
+                    item,
+                    param.span(),
+                    format_args!(
+                        "only `#[proc_macro]` and `#[proc_macro_attribute]` support `*_as_dummy` \
+                         flags"
+                    ),
+                    format_args!("try `#[manyhow{}]` instead", flags_replace(i, None)),
+                );
+            }
+            ("proc_macro" | "proc_macro_attribute" | "proc_macro_derive", _) => {}
+            _ => {
+                return with_helpful_error(
+                    item,
+                    param.span(),
+                    format_args!(
+                        "only `proc_macro`, `proc_macro_attribute`, `proc_macro_derive`, `{}`, \
+                         and `impl_fn` are supported",
+                        kind.dummy_flag(),
+                    ),
+                    format_args!("try `#[manyhow{}]", flags_replace(i, None)),
+                );
+            }
         }
-        _ = input.next_tt_comma();
     }
     // All attributes are parsed now there should only be a public function
 
@@ -177,11 +275,14 @@ pub fn manyhow(
         }
     });
     let Some(fn_name) = parser.next_ident() else {
-            return with_error(
-                item,
-                parser.next().as_ref().map_or_else(Span::call_site, TokenTree::span),
-                "expected function name",
-            );
+        return with_error(
+            item,
+            parser
+                .next()
+                .as_ref()
+                .map_or_else(Span::call_site, TokenTree::span),
+            "expected function name",
+        );
     };
     let impl_fn = impl_fn.then(|| format_ident!("{fn_name}_impl"));
     // function name
@@ -197,12 +298,17 @@ pub fn manyhow(
             );
         }
     }
-    typ.to_signature(&mut output);
+    kind.to_signature(&mut output);
     // (...)
     let params = parser.next_group().expect("params");
     // ->
     let Some(arrow) = parser.next_tt_r_arrow() else {
-        return with_helpful_error(item, params.span_close(), "expected return type", "try adding either `-> TokenStream` or `-> manyhow::Result`");
+        return with_helpful_error(
+            item,
+            params.span_close(),
+            "expected return type",
+            "try adding either `-> TokenStream` or `-> manyhow::Result`",
+        );
     };
     // return type
     let ret_ty = parser
@@ -222,7 +328,7 @@ pub fn manyhow(
         {
             #inner_impl_fn
             let __as_dummy = #as_dummy;
-            #typ
+            #kind
         }
     }
     .to_tokens(&mut output);
