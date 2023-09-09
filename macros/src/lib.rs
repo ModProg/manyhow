@@ -1,7 +1,7 @@
 use std::fmt::{Display, Write};
 
 use proc_macro2::{Group, Ident, Span, TokenStream, TokenTree};
-use proc_macro_utils::{Delimited, TokenStream2Ext, TokenStreamExt};
+use proc_macro_utils::{Delimited, TokenStream2Ext, TokenStreamExt, TokenTree2Ext, TokenTreePunct};
 use quote::{format_ident, quote, quote_spanned, ToTokens};
 
 #[derive(PartialEq, Eq, Clone, Copy)]
@@ -31,14 +31,14 @@ impl ProcMacroType {
         }
     }
 }
-impl ToTokens for ProcMacroType {
-    fn to_tokens(&self, tokens: &mut TokenStream) {
+impl ProcMacroType {
+    fn to_tokens(self, impl_path: TokenStream) -> TokenStream {
         let fn_name = match self {
             ProcMacroType::Function => quote!(function),
             ProcMacroType::Derive => quote!(derive),
             ProcMacroType::Attribute => quote!(attribute),
         };
-        let item = if *self == ProcMacroType::Attribute {
+        let item = if self == ProcMacroType::Attribute {
             quote!(, __item)
         } else {
             quote!()
@@ -49,9 +49,8 @@ impl ToTokens for ProcMacroType {
             quote!()
         };
         quote! {
-            ::manyhow::#fn_name(__input #item #as_dummy, __implementation)
+            ::manyhow::#fn_name(__input #item #as_dummy, #impl_path)
         }
-        .to_tokens(tokens)
     }
 }
 
@@ -203,10 +202,10 @@ pub fn manyhow(
     };
 
     let mut as_dummy = false;
-    let mut impl_fn = false;
+    let mut create_impl_fn = None;
     for (i, param) in flags.iter().enumerate() {
         match (param.ident().to_string().as_str(), kind) {
-            ("impl_fn", _) => impl_fn = true,
+            ("impl_fn", _) => create_impl_fn = Some((param.ident(), i)),
             ("item_as_dummy", ProcMacroType::Attribute) => as_dummy = true,
             ("item_as_dummy", ProcMacroType::Function) => {
                 return with_helpful_error(
@@ -263,66 +262,116 @@ pub fn manyhow(
 
     // vis
     output.extend(parser.next_if(|tt| matches!(tt, TokenTree::Ident(ident) if ident == "pub")));
-    // fn
-    output.push(match parser.next() {
-        Some(TokenTree::Ident(ident)) if ident == "fn" => ident.into(),
-        token => {
-            return with_error(
+
+    let outer_impl_fn: Option<TokenStream>;
+    let impl_fn_path: TokenStream;
+    let inner_impl_fn: Option<TokenStream>;
+
+    // we support both use and fn
+    if parser.next_keyword("use").is_some() {
+        if let Some((ident, i)) = create_impl_fn {
+            return with_helpful_error(
                 item,
-                token.as_ref().map_or_else(Span::call_site, TokenTree::span),
-                "expected function",
+                ident.span(),
+                "`impl_fn` is not supported on use statements",
+                format_args!("try `#[manyhow{}]", flags_replace(i, None)),
             );
         }
-    });
-    let Some(fn_name) = parser.next_ident() else {
-        return with_error(
-            item,
-            parser
-                .next()
-                .as_ref()
-                .map_or_else(Span::call_site, TokenTree::span),
-            "expected function name",
+
+        let mut path = parser.collect::<Vec<_>>();
+        assert!(
+            path.pop().as_ref().is_some_and(TokenTreePunct::is_semi),
+            "use statement should end with semi"
         );
-    };
-    let impl_fn = impl_fn.then(|| format_ident!("{fn_name}_impl"));
-    // function name
-    output.push(fn_name.into());
-    // there should not be any generics
-    match parser.next_tt_lt() {
-        None => {}
-        Some(lt) => {
+
+        let fn_name = path
+            .last()
+            .expect("use statement should contain at least on item");
+
+        let Some(fn_name) = fn_name.ident() else {
+            return with_helpful_error(
+                item,
+                fn_name.span(),
+                "only use statements for a single function, i.e., `use ...::fn_name;` are \
+                 supported",
+                "try splitting the use statment",
+            );
+        };
+
+        quote!(fn #fn_name).to_tokens(&mut output);
+        impl_fn_path = path.into_iter().collect();
+
+        outer_impl_fn = None;
+        inner_impl_fn = None;
+    } else {
+        // fn
+        output.push(match parser.next() {
+            Some(TokenTree::Ident(ident)) if ident == "fn" => ident.into(),
+            token => {
+                return with_error(
+                    item,
+                    token.as_ref().map_or_else(Span::call_site, TokenTree::span),
+                    "expected function",
+                );
+            }
+        });
+        let Some(fn_name) = parser.next_ident() else {
             return with_error(
                 item,
-                lt.into_iter().next().unwrap().span(),
-                "proc macros cannot have generics",
+                parser
+                    .next()
+                    .as_ref()
+                    .map_or_else(Span::call_site, TokenTree::span),
+                "expected function name",
             );
+        };
+        // function name
+        fn_name.to_tokens(&mut output);
+
+        // there should not be any generics
+        match parser.next_tt_lt() {
+            None => {}
+            Some(lt) => {
+                return with_error(
+                    item,
+                    lt.into_iter().next().unwrap().span(),
+                    "proc macros cannot have generics",
+                );
+            }
+        }
+        // (...)
+        let params = parser.next_group().expect("params");
+        // ->
+        let Some(arrow) = parser.next_tt_r_arrow() else {
+            return with_helpful_error(
+                item,
+                params.span_close(),
+                "expected return type",
+                "try adding either `-> TokenStream` or `-> manyhow::Result`",
+            );
+        };
+        // return type
+        let ret_ty = parser
+            .next_until(|tt| tt.is_braced())
+            .expect("return type after ->");
+        // {...}
+        let body = parser.next_group().expect("body");
+        assert!(parser.is_empty(), "no tokens after function body");
+
+        if create_impl_fn.is_some() {
+            impl_fn_path = format_ident!("{fn_name}_impl").to_token_stream();
+            outer_impl_fn = Some(quote!(fn #impl_fn_path #params #arrow #ret_ty #body));
+            inner_impl_fn = None;
+        } else {
+            impl_fn_path = fn_name.to_token_stream();
+            inner_impl_fn = Some(quote!(fn #fn_name #params #arrow #ret_ty #body));
+            outer_impl_fn = None;
         }
     }
-    kind.to_signature(&mut output);
-    // (...)
-    let params = parser.next_group().expect("params");
-    // ->
-    let Some(arrow) = parser.next_tt_r_arrow() else {
-        return with_helpful_error(
-            item,
-            params.span_close(),
-            "expected return type",
-            "try adding either `-> TokenStream` or `-> manyhow::Result`",
-        );
-    };
-    // return type
-    let ret_ty = parser
-        .next_until(|tt| tt.is_braced())
-        .expect("return type after ->");
-    // {...}
-    let body = parser.next_group().expect("body");
-    assert!(parser.is_empty(), "no tokens after function body");
 
-    let inner_impl_fn = if let Some(impl_fn) = &impl_fn {
-        quote!(let __implementation = #impl_fn;)
-    } else {
-        quote!(fn __implementation #params #arrow #ret_ty #body)
-    };
+    kind.to_signature(&mut output);
+
+    let kind = kind.to_tokens(impl_fn_path);
 
     quote! {
         {
@@ -333,9 +382,7 @@ pub fn manyhow(
     }
     .to_tokens(&mut output);
 
-    if let Some(impl_fn) = impl_fn {
-        quote!(fn #impl_fn #params #arrow #ret_ty #body).to_tokens(&mut output);
-    }
+    outer_impl_fn.to_tokens(&mut output);
     output.into()
 }
 

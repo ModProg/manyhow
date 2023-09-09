@@ -125,3 +125,17 @@ fn unit_test_with_dummy() {
         "Hello World"
     );
 }
+
+mod module {
+    use manyhow::SilentError;
+    use proc_macro2::TokenStream;
+
+    use crate::SilentResult;
+
+    pub fn attr_use(_input: TokenStream, _item: TokenStream) -> SilentResult {
+        Err(SilentError)
+    }
+}
+
+#[manyhow(proc_macro_attribute)]
+pub use module::attr_use;

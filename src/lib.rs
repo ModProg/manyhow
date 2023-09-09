@@ -49,6 +49,7 @@
 //! #[manyhow]
 //! #[proc_macro]
 //! # };
+//! // You can also merge the two attributes: #[manyhow(proc_macro)]
 //! fn my_macro(input: TokenStream2) -> syn::Result<TokenStream2> {
 //!     // ..
 //! #   Ok(quote!())
@@ -57,6 +58,32 @@
 //!
 //! See [Without macros](#without-macros) to see what this expands to under the
 //! hood.
+//!
+//! You can also use the `#[manyhow]` attrubutes on a use statement, useful when
+//! moving your proc-macro implementations in seperate modules.
+//!
+//! ```
+//! # use quote::quote;
+//! use manyhow::manyhow;
+//!
+//! mod module {
+//!     # use quote::quote;
+//!     # use syn2 as syn;
+//!     use proc_macro2::TokenStream as TokenStream2;
+//!
+//!     pub fn my_macro(input: TokenStream2) -> syn::Result<TokenStream2> {
+//!         // ..
+//!     #   Ok(quote!())
+//!     }
+//! }
+//!
+//! # let _ = quote!{
+//! #[manyhow]
+//! #[proc_macro]
+//! # };
+//! // You can also merge the two attributes: #[manyhow(proc_macro)]
+//! pub use module::my_macro;
+//! ```
 //!
 //! A proc macro function marked as `#[manyhow]` can take and return any
 //! [`TokenStream`](AnyTokenStream), and can also return `Result<TokenStream,

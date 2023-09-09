@@ -4,14 +4,14 @@ use std::fmt::{Debug, Display};
 use std::mem;
 use std::ops::Range;
 
+#[cfg(feature = "darling")]
+use darling_core::Error as DarlingError;
 use proc_macro2::{Span, TokenStream};
 use quote::{quote_spanned, ToTokens};
 #[cfg(feature = "syn1")]
 use syn1::Error as Syn1Error;
 #[cfg(feature = "syn2")]
 use syn2::Error as Syn2Error;
-#[cfg(feature = "darling")]
-use darling_core::Error as DarlingError;
 
 #[cfg(doc)]
 use crate::MacroHandler;

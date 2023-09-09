@@ -6,6 +6,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 ### Added
+- Support attribute on use statement of function.
 - Support `#[manyhow(proc_macro*)]` to specify proc-macro kind
 
 ## [0.5.1] - 2023-07-21
