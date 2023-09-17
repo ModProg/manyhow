@@ -141,9 +141,16 @@ macro_rules! bail {
 /// [`anyhow::ensure!`](https://docs.rs/anyhow/latest/anyhow/macro.ensure.html).
 ///
 /// The syntax is identical to [`bail!`], with an additional leading condition.
+///
+/// Additional to a boolean expression, the expression can also be a `let ... =
+/// ...` pattern matching, and will expand to `let ... else`.
 /// ```
 /// # use manyhow::ensure;
 /// ensure!(true, "an error message"; help = "with attachments");
+///
+/// ensure!(let Some(a) = Some(1), "error");
+/// assert_eq!(a, 1);
+///
 /// # Ok::<_, manyhow::Error>(())
 /// ```
 /// ```should_panic
@@ -162,6 +169,11 @@ macro_rules! ensure {
         if !$cond {
             $crate::bail!($($bail_args)*);
         }
+    };
+    (let $pat:pat = $expr:expr, $($bail_args:tt)*) => {
+        let $pat = $cond else {
+            $crate::bail!($($bail_args)*);
+        };
     };
 }
 
