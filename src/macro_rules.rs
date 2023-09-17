@@ -109,7 +109,7 @@ macro_rules! error_message {
     };
 }
 
-/// Exit by returning error, matching [`anyhow::bail!`](https://docs.rs/anyhow/latest/anyhow/macro.bail.html)
+/// Exit by returning error, matching [`anyhow::bail!`](https://docs.rs/anyhow/latest/anyhow/macro.bail.html).
 ///
 /// The syntax is identical to [`error_message!`], the only difference is, that
 /// a single expression with an error is supported as well.
@@ -121,6 +121,7 @@ macro_rules! error_message {
 /// let span = Span::call_site();
 /// bail!(span, "error message");
 /// let error = syn::Error::new(Span::call_site(), "an error");
+/// bail!(error);
 /// # Ok::<_, manyhow::Error>(())
 /// ```
 #[macro_export]
@@ -133,6 +134,34 @@ macro_rules! bail {
     };
     ($($tt:tt)*) => {
         return ::core::result::Result::Err($crate::error_message!($($tt)*).into());
+    };
+}
+
+/// Return early with an error, if a condition is not satisfied, matching
+/// [`anyhow::ensure!`](https://docs.rs/anyhow/latest/anyhow/macro.ensure.html).
+///
+/// The syntax is identical to [`bail!`], with an additional leading condition.
+/// ```
+/// # use manyhow::ensure;
+/// ensure!(true, "an error message"; help = "with attachments");
+/// # Ok::<_, manyhow::Error>(())
+/// ```
+/// ```should_panic
+/// # use manyhow::ensure;
+/// # use proc_macro2::Span;
+/// # use syn2 as syn;
+/// let span = Span::call_site();
+/// ensure!(false, span, "error message");
+/// let error = syn::Error::new(Span::call_site(), "an error");
+/// ensure!(false, error);
+/// # Ok::<_, manyhow::Error>(())
+/// ```
+#[macro_export]
+macro_rules! ensure {
+    ($cond:expr, $($bail_args:tt)*) => {
+        if !$cond {
+            $crate::bail!($($bail_args)*);
+        }
     };
 }
 
