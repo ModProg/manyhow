@@ -171,7 +171,7 @@ macro_rules! ensure {
         }
     };
     (let $pat:pat = $expr:expr, $($bail_args:tt)*) => {
-        let $pat = $cond else {
+        let $pat = $expr else {
             $crate::bail!($($bail_args)*);
         };
     };
