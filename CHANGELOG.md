@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <!-- ## [Unreleased] -->
 ## [0.8.1] - 2023-09-17
 ### Fixed
-- `ensur!(let...)` had compile error in its expansion.
+- `ensure!(let...)` had compile error in its expansion.
 
 ## [0.8.0] - 2023-09-17
 ### Changed
