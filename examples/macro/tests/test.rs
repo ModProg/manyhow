@@ -12,6 +12,10 @@ fn attr() {
     #[attr_custom_dummy]
     struct ItemAsDummy; // does not conflict with above
     dummy();
+
+    #[parse_quote_attribute("string")]
+    struct Struct;
+    _ = Struct;
 }
 
 #[test]
@@ -29,6 +33,8 @@ fn function() {
         struct InputAsDummy;
     );
     dummy();
+
+    assert_eq!("hello", parse_quote!("hello"));
 }
 
 #[test]

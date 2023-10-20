@@ -1,5 +1,5 @@
 #![cfg_attr(docsrs, feature(doc_auto_cfg))]
-#![warn(clippy::pedantic, missing_docs)]
+// #![warn(clippy::pedantic, missing_docs)]
 #![allow(clippy::module_name_repetitions)]
 //! Proc **m**acro **anyhow**, a combination of ideas from
 //! [`anyhow`](docs.rs/anyhow) and
@@ -199,6 +199,7 @@
 
 use std::convert::Infallible;
 
+#[cfg(feature = "macros")]
 pub use macros::manyhow;
 use proc_macro2::TokenStream;
 #[cfg(doc)]
@@ -214,17 +215,99 @@ mod macro_rules;
 mod error;
 pub use error::*;
 
+#[cfg(feature = "syn2")]
+mod parse_to_tokens;
+
 #[doc(hidden)]
 pub mod __private {
+    pub use std::prelude::rust_2021::*;
+
+    use proc_macro2::TokenStream;
+
     pub use crate::span_ranged::{SpanRangedToSpanRange, ToTokensToSpanRange};
+    pub type Dummy = Option<TokenStream>;
+
+    #[cfg(feature = "syn2")]
+    pub use crate::parse_to_tokens::*;
 }
 
 /// Marker trait for [`proc_macro::TokenStream`] and
 /// [`proc_macro2::TokenStream`]
-pub trait AnyTokenStream: Clone + From<TokenStream> + Into<TokenStream> {}
+pub trait AnyTokenStream: Clone + From<TokenStream> + Into<TokenStream> + Default {}
 impl AnyTokenStream for TokenStream {}
 impl AnyTokenStream for proc_macro::TokenStream {}
 
+macro_rules! handler {
+    ($(#$doc:tt)*$name:ident; $($input:ident: $Input:ident),*; $($dummy:ident, $dummy_value:ident)?) => {
+        $(#$doc)*
+        pub fn $name<
+            $($Input: AnyTokenStream,)*
+            Output: AnyTokenStream,
+            Return: AnyTokenStream,
+            Error: ToTokensError,
+            Function,
+        >(
+            $($input: impl AnyTokenStream,)*
+            $($dummy: bool,)?
+            body: impl MacroHandler<($($Input,)*), Output, Output, Function, Error>,
+        ) -> Return {
+            #[allow(unused_mut)]
+            let mut tokens = Output::default();
+            $(let mut tokens = if $dummy {
+                $dummy_value.clone().into().into()
+            } else {
+                tokens
+            };)?
+            let mut emitter = Emitter::new();
+            let output = body.call(($($input.into().into(),)*), &mut tokens, &mut emitter);
+            let mut tokens = tokens.into();
+            let mut tokens = match output {
+                Ok(tokens) => tokens.into(),
+                Err(error) => {
+                    error.to_tokens(&mut tokens);
+                    tokens
+                }
+            };
+            emitter.to_tokens(&mut tokens);
+            tokens.into()
+        }
+    };
+}
+
+#[macro_export]
+#[doc(hidden)]
+macro_rules! __macro_handler {
+    ($name:ident; $($(#attr=$attr:tt)? $n:ident: $input:expr),+; $impl:expr$(; dummy:$dummy:expr)?) => {
+        $crate::__macro_handler! {! $name; $($(#attr=$attr)? $n: $input.clone()),+; $impl $(; $crate::__private::Some($dummy))?}
+    };
+    ($name:ident; $($(#attr=$attr:tt)? $n:ident: $input:expr),+; $impl:expr; dummy) => {
+        $crate::__macro_handler! {! $name; $($(#attr=$attr)? $n: $input),+; $impl; $crate::__private::Dummy::None}
+    };
+    (! $name:ident; $($(#attr=$attr:tt)? $n:ident: $input:expr),+; $impl:expr $(; $dummy:expr)?) => {{
+        use $crate::__private::ParseToTokens;
+        let implementation = $impl;
+        $(let $n = &$crate::__private::WhatType::new();)+
+        if false {
+            _ = $crate::__private::$name($($n.identify(),)+ $($dummy,)? implementation);
+            unreachable!();
+        } else {
+            match $crate::__private::$name($(
+                {#[allow(unused)]
+                let attr = false;
+                $(let attr = $attr;)?
+                $n.manyhow_parse($input, attr)},
+            )+ $($dummy,)? implementation)
+            {
+                Err(tokens) => tokens.into(),
+                Ok((output, tokens)) => (&$crate::__private::WhatType::from(&output))
+                    .manyhow_into_token_stream(output, tokens)
+                    .into(),
+            }
+        }
+    }};
+}
+
+handler! {
 /// Handles [`proc_macro_attribute`](https://doc.rust-lang.org/reference/procedural-macros.html#attribute-macros)
 /// implementation
 ///
@@ -289,40 +372,17 @@ impl AnyTokenStream for proc_macro::TokenStream {}
 ///
 /// assert_tokens! {output, {struct Struct(HelloWorld);}};
 /// ```
-pub fn attribute<
-    Input: AnyTokenStream,
-    Item: AnyTokenStream,
-    Output: AnyTokenStream,
-    Return: AnyTokenStream,
-    Error: ToTokensError,
-    Function,
->(
-    input: impl AnyTokenStream,
-    item: impl AnyTokenStream,
-    item_as_dummy: bool,
-    body: impl MacroHandler<(Input, Item), Output, Function, Error>,
-) -> Return {
-    let mut tokens: Output = if item_as_dummy {
-        item.clone().into().into()
-    } else {
-        TokenStream::default().into()
+attribute; input: Input, item: Item; item_as_dummy, item
+}
+
+#[macro_export]
+macro_rules! attribute {
+    (#item_as_dummy $input:expr, $item:expr, $impl:expr) => {
+        $crate::__macro_handler!{attribute_transparent; #attr=true input: $input, item: $item.clone(); $impl; dummy: $item}
     };
-    let mut emitter = Emitter::new();
-    let output = body.call(
-        (input.into().into(), item.into().into()),
-        &mut tokens,
-        &mut emitter,
-    );
-    let mut tokens = tokens.into();
-    let mut tokens = match output {
-        Ok(tokens) => tokens.into(),
-        Err(error) => {
-            error.to_tokens(&mut tokens);
-            tokens
-        }
+    ($input:expr, $item:expr, $impl:expr) => {
+        $crate::__macro_handler!{attribute_transparent; #attr=true input: $input, item: $item; $impl; dummy}
     };
-    emitter.to_tokens(&mut tokens);
-    tokens.into()
 }
 
 /// Handles [`proc_macro_derive`](https://doc.rust-lang.org/reference/procedural-macros.html#derive-macros)
@@ -356,7 +416,7 @@ pub fn derive<
     Function,
 >(
     item: impl AnyTokenStream,
-    body: impl MacroHandler<(Item,), Output, Function, Error>,
+    body: impl MacroHandler<(Item,), Output, Output, Function, Error>,
 ) -> Return {
     let mut tokens = TokenStream::default().into();
     let mut emitter = Emitter::new();
@@ -371,6 +431,13 @@ pub fn derive<
     };
     emitter.to_tokens(&mut tokens);
     tokens.into()
+}
+
+#[macro_export]
+macro_rules! derive {
+    ($item:expr, $impl:expr) => {
+        $crate::__macro_handler! {derive_transparent; item: $item; $impl}
+    };
 }
 
 /// Handles function like [`proc_macro`](https://doc.rust-lang.org/reference/procedural-macros.html#function-like-procedural-macros)
@@ -435,7 +502,7 @@ pub fn function<
 >(
     input: impl AnyTokenStream,
     input_as_dummy: bool,
-    body: impl MacroHandler<(Input,), Output, Function, Error>,
+    body: impl MacroHandler<(Input,), Output, Output, Function, Error>,
 ) -> Return {
     let mut tokens: Output = if input_as_dummy {
         input.clone().into().into()
@@ -456,6 +523,45 @@ pub fn function<
     tokens.into()
 }
 
+#[macro_export]
+macro_rules! function {
+    (#input_as_dummy $input:expr, $impl:expr) => {
+        $crate::__macro_handler! {function_transparent; input: $input; $impl; dummy: $input}
+    };
+    ($input:expr, $impl:expr) => {
+        $crate::__macro_handler! {function_transparent; input: $input; $impl; dummy}
+    };
+}
+
+#[test]
+fn function_macro() {
+    use proc_macro::TokenStream as TokenStream1;
+    use quote::{quote, ToTokens};
+    // proc_macro2::TokenStream
+    let output: TokenStream =
+        function!(quote!(hello), |input: TokenStream| -> TokenStream { input });
+    assert_eq!(output.to_string(), "hello");
+    // proc_macro::TokenStream do not run :D
+    if false {
+        let _: TokenStream1 = function!(
+            TokenStream1::from(quote!(hello)),
+            |input: TokenStream1| -> TokenStream1 { input }
+        );
+    }
+
+    let output: TokenStream = function!(#input_as_dummy quote!(hello;), |input: syn2::LitInt| -> TokenStream {
+        input.into_token_stream()
+    });
+    assert_eq!(
+        output.to_string(),
+        quote!(hello; ::core::compile_error! { "expected integer literal" }).to_string()
+    );
+    let output: TokenStream = function!(quote!(20), |_input: syn2::LitInt| -> syn2::Ident {
+        syn2::parse_quote!(hello)
+    });
+    assert_eq!(output.to_string(), "hello");
+}
+
 /// Implementation of a proc-macro
 ///
 /// Note: for `TokenStream` either [`proc_macro::TokenStream`] or
@@ -470,31 +576,32 @@ pub fn function<
 /// Emitter`](Emitter) which allows emitting errors without returning early. And
 /// a `&mut TokenStream` to return a dummy `TokenStream` on failure, note that
 /// this `TokenStream` must be the same type as the one returned.
-pub trait MacroHandler<Input, Output, Function, Error = Infallible> {
+pub trait MacroHandler<Input, Dummy, Output, Function, Error = Infallible> {
     #[allow(clippy::missing_errors_doc, missing_docs)]
-    fn call(self, input: Input, dummy: &mut Output, emitter: &mut Emitter)
-    -> Result<Output, Error>;
+    fn call(self, input: Input, dummy: &mut Dummy, emitter: &mut Emitter) -> Result<Output, Error>;
 }
 
 macro_rules! impl_attribute_macro {
     ($dummy:ident, $emitter:ident =>
-        $(<$($Inputs:ident),+>(($($in_id:ident),+):($($in_ty:ty),+)$(, $ident:ident:$ty:ty)*);)+) => {
+        $(<$($Inputs:ident $(:$Bound:ident)?),+>(($($in_id:ident),+):($($in_ty:ty),+)$(, $ident:ident:$ty:ty)*), $Dummy:ident;)+) => {
         $(
-        impl<$($Inputs,)+ Output: AnyTokenStream, F> MacroHandler<($($Inputs,)+), Output, ($($in_ty,)* $($ty,)* Output)> for F
+        // NOTE: This `Clone` is just a marker to make this != Emitter
+        impl<$($Inputs $(:$Bound)?,)+ Output: Clone, F> MacroHandler<($($in_ty,)+), $Dummy, Output, ($($in_ty,)* $($ty,)* Output)> for F
         where
             F: FnOnce($($in_ty,)+ $($ty,)*) -> Output
         {
             #[allow(unused)]
-            fn call(self, ($($in_id,)+): ($($in_ty,)+), $dummy: &mut Output, $emitter: &mut Emitter) -> Result<Output, Infallible> {
+            fn call(self, ($($in_id,)+): ($($in_ty,)+), $dummy: &mut $Dummy, $emitter: &mut Emitter) -> Result<Output, Infallible> {
                 Ok(self($($in_id,)+ $($ident),*))
             }
         }
-        impl<$($Inputs,)+ Output: AnyTokenStream, F, Error> MacroHandler<($($Inputs,)+), Output, ($($in_ty,)* $($ty,)* Result<Output, Error>), Error> for F
+        // NOTE: This `Clone` is just a marker to make this != Emitter
+        impl<$($Inputs $(:$Bound)?,)+ Output: Clone, F, Error> MacroHandler<($($in_ty,)+), $Dummy, Output, ($($in_ty,)* $($ty,)* Result<Output, Error>), Error> for F
         where
             F: FnOnce($($in_ty,)+ $($ty,)*) -> Result<Output, Error>
         {
             #[allow(unused)]
-            fn call(self, ($($in_id,)+): ($($in_ty,)+), $dummy: &mut Output, $emitter: &mut Emitter) -> Result<Output, Error> {
+            fn call(self, ($($in_id,)+): ($($in_ty,)+), $dummy: &mut $Dummy, $emitter: &mut Emitter) -> Result<Output, Error> {
                 self($($in_id,)+ $($ident),*)
             }
         }
@@ -504,14 +611,14 @@ macro_rules! impl_attribute_macro {
 
 impl_attribute_macro! {
     dummy, emitter =>
-    <Input, Item> ((input, item): (Input, Item), dummy: &mut Output);
-    <Input, Item> ((input, item): (Input, Item));
-    <Input, Item> ((input, item): (Input, Item), dummy: &mut Output, emitter: &mut Emitter);
-    <Input, Item> ((input, item): (Input, Item), emitter: &mut Emitter);
-    <Input, Item> ((input, item): (Input, Item), emitter: &mut Emitter, dummy: &mut Output);
-    <Input> ((input): (Input), dummy: &mut Output);
-    <Input> ((input): (Input));
-    <Input> ((input): (Input), dummy: &mut Output, emitter: &mut Emitter);
-    <Input> ((input): (Input), emitter: &mut Emitter);
-    <Input> ((input): (Input), emitter: &mut Emitter, dummy: &mut Output);
+    <Input, Item, Dummy: Clone> ((input, item): (Input, Item), dummy: &mut Dummy), Dummy;
+    <Input, Item> ((input, item): (Input, Item)), TokenStream;
+    <Input, Item, Dummy: Clone> ((input, item): (Input, Item), dummy: &mut Dummy, emitter: &mut Emitter), Dummy;
+    <Input, Item> ((input, item): (Input, Item), emitter: &mut Emitter), TokenStream;
+    <Input, Item, Dummy: Clone> ((input, item): (Input, Item), emitter: &mut Emitter, dummy: &mut Dummy), Dummy;
+    <Input, Dummy: Clone> ((input): (Input), dummy: &mut Dummy), Dummy;
+    <Input> ((input): (Input)), TokenStream;
+    <Input, Dummy: Clone> ((input): (Input), dummy: &mut Dummy, emitter: &mut Emitter), Dummy;
+    <Input> ((input): (Input), emitter: &mut Emitter), TokenStream;
+    <Input, Dummy: Clone> ((input): (Input), emitter: &mut Emitter, dummy: &mut Dummy), Dummy;
 }

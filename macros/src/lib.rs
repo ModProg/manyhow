@@ -32,7 +32,7 @@ impl ProcMacroType {
     }
 }
 impl ProcMacroType {
-    fn to_tokens(self, impl_path: TokenStream) -> TokenStream {
+    fn to_tokens(self, impl_path: TokenStream, as_dummy: TokenStream) -> TokenStream {
         let fn_name = match self {
             ProcMacroType::Function => quote!(function),
             ProcMacroType::Derive => quote!(derive),
@@ -43,13 +43,8 @@ impl ProcMacroType {
         } else {
             quote!()
         };
-        let as_dummy = if matches!(self, ProcMacroType::Attribute | ProcMacroType::Function) {
-            quote!(, __as_dummy)
-        } else {
-            quote!()
-        };
         quote! {
-            ::manyhow::#fn_name(__input #item #as_dummy, #impl_path)
+            ::manyhow::#fn_name!(#as_dummy __input #item, #impl_path)
         }
     }
 }
@@ -201,12 +196,13 @@ pub fn manyhow(
         }
     };
 
-    let mut as_dummy = false;
+    let mut as_dummy = TokenStream::default();
     let mut create_impl_fn = None;
     for (i, param) in flags.iter().enumerate() {
-        match (param.ident().to_string().as_str(), kind) {
+        let ident = param.ident();
+        match (ident.to_string().as_str(), kind) {
             ("impl_fn", _) => create_impl_fn = Some((param.ident(), i)),
-            ("item_as_dummy", ProcMacroType::Attribute) => as_dummy = true,
+            ("item_as_dummy", ProcMacroType::Attribute) => as_dummy = quote!(# #ident),
             ("item_as_dummy", ProcMacroType::Function) => {
                 return with_helpful_error(
                     item,
@@ -220,7 +216,7 @@ pub fn manyhow(
                     ),
                 );
             }
-            ("input_as_dummy", ProcMacroType::Function) => as_dummy = true,
+            ("input_as_dummy", ProcMacroType::Function) => as_dummy = quote!(# #ident),
             ("input_as_dummy", ProcMacroType::Attribute) => {
                 return with_helpful_error(
                     item,
@@ -371,12 +367,11 @@ pub fn manyhow(
 
     kind.to_signature(&mut output);
 
-    let kind = kind.to_tokens(impl_fn_path);
+    let kind = kind.to_tokens(impl_fn_path, as_dummy);
 
     quote! {
         {
             #inner_impl_fn
-            let __as_dummy = #as_dummy;
             #kind
         }
     }
