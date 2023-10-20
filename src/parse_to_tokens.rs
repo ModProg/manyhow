@@ -90,6 +90,7 @@ macro_rules! transparent_handlers {
             $($dummy: Option<impl AnyTokenStream>,)?
             body: impl MacroHandler<($($Input,)*), Dummy, Output, Function, Error>,
         ) -> Result<(Output, TokenStream), TokenStream> {
+            // use $crate::ToTokensError as _;
             #[allow(unused)]
             let mut dummy = TokenStream::new();
             $(let mut dummy = $dummy.unwrap_or_default().into();)?
@@ -105,7 +106,7 @@ macro_rules! transparent_handlers {
             let mut emitter = Emitter::new();
             let output = body.call(($($input,)*), &mut tokens, &mut emitter);
             match output {
-                Ok(tokens) => Ok((tokens, emitter.into_token_stream())),
+                Ok(tokens) => Ok((tokens, emitter.into_result().err().map($crate::ToTokensError::into_token_stream).unwrap_or_default())),
                 Err(error) => {
                     let mut tokens = tokens.into();
                     error.to_tokens(&mut tokens);

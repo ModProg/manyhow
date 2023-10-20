@@ -215,7 +215,6 @@ mod macro_rules;
 mod error;
 pub use error::*;
 
-#[cfg(feature = "syn2")]
 mod parse_to_tokens;
 
 #[doc(hidden)]
@@ -223,11 +222,11 @@ pub mod __private {
     pub use std::prelude::rust_2021::*;
 
     use proc_macro2::TokenStream;
+    pub use quote;
 
     pub use crate::span_ranged::{SpanRangedToSpanRange, ToTokensToSpanRange};
     pub type Dummy = Option<TokenStream>;
 
-    #[cfg(feature = "syn2")]
     pub use crate::parse_to_tokens::*;
 }
 
@@ -536,7 +535,7 @@ macro_rules! function {
 #[test]
 fn function_macro() {
     use proc_macro::TokenStream as TokenStream1;
-    use quote::{quote, ToTokens};
+    use quote::quote;
     // proc_macro2::TokenStream
     let output: TokenStream =
         function!(quote!(hello), |input: TokenStream| -> TokenStream { input });
@@ -549,17 +548,21 @@ fn function_macro() {
         );
     }
 
-    let output: TokenStream = function!(#input_as_dummy quote!(hello;), |input: syn2::LitInt| -> TokenStream {
-        input.into_token_stream()
-    });
-    assert_eq!(
-        output.to_string(),
-        quote!(hello; ::core::compile_error! { "expected integer literal" }).to_string()
-    );
-    let output: TokenStream = function!(quote!(20), |_input: syn2::LitInt| -> syn2::Ident {
-        syn2::parse_quote!(hello)
-    });
-    assert_eq!(output.to_string(), "hello");
+    #[cfg(feature = "syn2")]
+    {
+        use quote::ToTokens;
+        let output: TokenStream = function!(#input_as_dummy quote!(hello;), |input: syn2::LitInt| -> TokenStream {
+            input.into_token_stream()
+        });
+        assert_eq!(
+            output.to_string(),
+            quote!(hello; ::core::compile_error! { "expected integer literal" }).to_string()
+        );
+        let output: TokenStream = function!(quote!(20), |_input: syn2::LitInt| -> syn2::Ident {
+            syn2::parse_quote!(hello)
+        });
+        assert_eq!(output.to_string(), "hello");
+    }
 }
 
 /// Implementation of a proc-macro
