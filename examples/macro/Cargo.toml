@@ -8,10 +8,10 @@ edition = "2021"
 proc-macro = true
 
 [dependencies]
-manyhow = {path = "../..", default-features = false}
+manyhow = {path = "../..", default-features = false, features = ["macros", "syn"]}
 proc-macro2 = "1"
 quote = "1"
-syn = "2"
+syn = { version = "2", features = ["full"] }
 
 [dev-dependencies]
 trybuild = "1.0.80"

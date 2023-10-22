@@ -1,0 +1,57 @@
+error: expected one of: `struct`, `enum`, `union`
+ --> tests/ui/parse.rs:4:1
+  |
+4 | fn test() {}
+  | ^^
+
+error: unexpected end of input, expected string literal
+ --> tests/ui/parse.rs:6:1
+  |
+6 | #[parse_quote_attribute]
+  | ^^^^^^^^^^^^^^^^^^^^^^^^
+  |
+  = note: this error originates in the attribute macro `parse_quote_attribute` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error: while parsing attribute argument (`#[... (...)]`)
+ --> tests/ui/parse.rs:6:1
+  |
+6 | #[parse_quote_attribute]
+  | ^^^^^^^^^^^^^^^^^^^^^^^^
+  |
+  = note: this error originates in the attribute macro `parse_quote_attribute` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error: expected one of: `struct`, `enum`, `union`
+  --> tests/ui/parse.rs:10:1
+   |
+10 | fn test_dummy() {}
+   | ^^
+
+error: error message
+  --> tests/ui/parse.rs:12:1
+   |
+12 | #[parse_quote_dummy_error_attribute]
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = note: this error originates in the attribute macro `parse_quote_dummy_error_attribute` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error: expected one of: `struct`, `enum`, `union`
+  --> tests/ui/parse.rs:16:5
+   |
+16 |     fn test_dummy3() {}
+   |     ^^
+
+error: error message
+  --> tests/ui/parse.rs:18:1
+   |
+18 | / parse_quote_dummy_error!(
+19 | |     fn test_dummy4() {}
+20 | | );
+   | |_^
+   |
+   = note: this error originates in the macro `parse_quote_dummy_error` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error: expected `struct`
+  --> tests/ui/parse.rs:23:1
+   |
+23 | enum NoStruct{}
+   | ^^^^

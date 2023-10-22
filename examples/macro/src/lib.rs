@@ -1,4 +1,4 @@
-use manyhow::{manyhow, Emitter, ErrorMessage, Result, SilentError};
+use manyhow::{bail, manyhow, Emitter, ErrorMessage, Result, SilentError};
 use proc_macro::TokenStream;
 use proc_macro2::{Span, TokenStream as TokenStream2};
 use quote::quote;
@@ -139,3 +139,45 @@ mod module {
 
 #[manyhow(proc_macro_attribute)]
 pub use module::attr_use;
+
+#[manyhow]
+#[proc_macro]
+pub fn parse_quote(input: syn::LitStr) -> syn::LitStr {
+    input
+}
+
+#[manyhow(input_as_dummy)]
+#[proc_macro]
+pub fn parse_quote_dummy(input: syn::DeriveInput) -> syn::DeriveInput {
+    input
+}
+
+#[manyhow(input_as_dummy)]
+#[proc_macro]
+pub fn parse_quote_dummy_error(_: TokenStream) -> Result<syn::Ident> {
+    bail!("error message")
+}
+
+#[manyhow]
+#[proc_macro_attribute]
+pub fn parse_quote_attribute(_: syn::LitStr, item: syn::DeriveInput) -> syn::DeriveInput {
+    item
+}
+
+#[manyhow(item_as_dummy)]
+#[proc_macro_attribute]
+pub fn parse_quote_dummy_attribute(_: syn::LitStr, item: syn::DeriveInput) -> syn::DeriveInput {
+    item
+}
+
+#[manyhow(item_as_dummy)]
+#[proc_macro_attribute]
+pub fn parse_quote_dummy_error_attribute(_: TokenStream, _: TokenStream) -> Result<syn::Ident> {
+    bail!("error message")
+}
+
+#[manyhow]
+#[proc_macro_derive(ParseQuote)]
+pub fn parse_quote_derive(item: syn::ItemStruct) -> syn::ItemStruct {
+    item
+}
