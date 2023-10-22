@@ -1,4 +1,4 @@
-use std::fmt::{Display, Write};
+use std::{fmt::{Display, Write}, mem};
 
 use proc_macro2::{Group, Ident, Span, TokenStream, TokenTree};
 use proc_macro_utils::{Delimited, TokenStream2Ext, TokenStreamExt, TokenTree2Ext, TokenTreePunct};
@@ -32,14 +32,22 @@ impl ProcMacroType {
     }
 }
 impl ProcMacroType {
-    fn to_tokens(self, impl_path: TokenStream, as_dummy: TokenStream) -> TokenStream {
+    fn to_tokens(self, impl_path: TokenStream, as_dummy: bool) -> TokenStream {
+        let mut as_dummy = if as_dummy {
+            quote!(#[as_dummy])
+        } else {
+            quote!()
+        };
+
         let fn_name = match self {
             ProcMacroType::Function => quote!(function),
             ProcMacroType::Derive => quote!(derive),
             ProcMacroType::Attribute => quote!(attribute),
         };
+
         let item = if self == ProcMacroType::Attribute {
-            quote!(, __item)
+            let as_dummy = mem::take(&mut as_dummy);
+            quote!(, #as_dummy __item)
         } else {
             quote!()
         };
@@ -196,13 +204,13 @@ pub fn manyhow(
         }
     };
 
-    let mut as_dummy = TokenStream::default();
+    let mut as_dummy = false;
     let mut create_impl_fn = None;
     for (i, param) in flags.iter().enumerate() {
         let ident = param.ident();
         match (ident.to_string().as_str(), kind) {
             ("impl_fn", _) => create_impl_fn = Some((param.ident(), i)),
-            ("item_as_dummy", ProcMacroType::Attribute) => as_dummy = quote!(# #ident),
+            ("item_as_dummy", ProcMacroType::Attribute) => as_dummy = true,
             ("item_as_dummy", ProcMacroType::Function) => {
                 return with_helpful_error(
                     item,
@@ -216,7 +224,7 @@ pub fn manyhow(
                     ),
                 );
             }
-            ("input_as_dummy", ProcMacroType::Function) => as_dummy = quote!(# #ident),
+            ("input_as_dummy", ProcMacroType::Function) => as_dummy = true,
             ("input_as_dummy", ProcMacroType::Attribute) => {
                 return with_helpful_error(
                     item,

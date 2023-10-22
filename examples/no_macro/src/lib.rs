@@ -132,14 +132,20 @@ pub fn parse_quote(input: TokenStream) -> TokenStream {
 
 #[proc_macro]
 pub fn parse_quote_dummy(input: TokenStream) -> TokenStream {
-    function!(#input_as_dummy input, |input: syn::DeriveInput| input)
+    function!(
+        #[as_dummy]
+        input,
+        |input: syn::DeriveInput| input
+    )
 }
 
 #[proc_macro]
 pub fn parse_quote_dummy_error(input: TokenStream) -> TokenStream {
-    function!(#input_as_dummy input, |_: TokenStream| -> Result<syn::Ident> {
-        bail!("error message")
-    })
+    function!(
+        #[as_dummy]
+        input,
+        |_: TokenStream| -> Result<syn::Ident> { bail!("error message") }
+    )
 }
 
 #[proc_macro_attribute]
@@ -149,14 +155,22 @@ pub fn parse_quote_attribute(input: TokenStream, item: TokenStream) -> TokenStre
 
 #[proc_macro_attribute]
 pub fn parse_quote_dummy_attribute(input: TokenStream, item: TokenStream) -> TokenStream {
-    attribute!(#item_as_dummy input, item, |_: TokenStream, item: syn::DeriveInput| item)
+    attribute!(
+        input,
+        #[as_dummy]
+        item,
+        |_: TokenStream, item: syn::DeriveInput| item
+    )
 }
 
 #[proc_macro_attribute]
 pub fn parse_quote_dummy_error_attribute(input: TokenStream, item: TokenStream) -> TokenStream {
-    attribute!(#item_as_dummy input, item, |_: TokenStream, _: TokenStream| -> Result<syn::Ident> {
-        bail!("error message")
-    })
+    attribute!(
+        input,
+        #[as_dummy]
+        item,
+        |_: TokenStream, _: TokenStream| -> Result<syn::Ident> { bail!("error message") }
+    )
 }
 
 #[proc_macro_derive(ParseQuote)]

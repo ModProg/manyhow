@@ -236,13 +236,6 @@ impl Emitter {
         }
     }
 
-    #[cfg(feature = "syn")]
-    pub(crate) fn into_token_stream(self) -> TokenStream {
-        let mut tokens = TokenStream::new();
-        self.to_tokens(&mut tokens);
-        tokens
-    }
-
     /// Emitts an error
     pub fn emit(&mut self, error: impl ToTokensError + 'static) {
         self.0.push(Box::new(error));

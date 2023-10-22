@@ -1,5 +1,5 @@
 #![cfg_attr(docsrs, feature(doc_auto_cfg))]
-// #![warn(clippy::pedantic, missing_docs)]
+#![warn(clippy::pedantic, missing_docs)]
 #![allow(clippy::module_name_repetitions)]
 //! Proc **m**acro **anyhow**, a combination of ideas from
 //! [`anyhow`](docs.rs/anyhow) and
@@ -7,11 +7,11 @@
 //! development, especially focused on the error handling.
 //!
 //! # Motivation
-//! Error handling in proc-macros is unideal, as the top level functions of proc
-//! macros can only return `TokenStreams` both in success and failure case. This
-//! means that I often write code like this, moving the actual implementation in
-//! a separate function to be able to use the ergonomic rust error handling with
-//! e.g., `?`.
+//! Error handling in proc-macros is unideal, as the top level functions of
+//! proc-macros can only return `TokenStreams` both in success and failure case.
+//! This means that I often write code like this, moving the actual
+//! implementation in a separate function to be able to use the ergonomic rust
+//! error handling with e.g., `?`.
 //! ```
 //! # use proc_macro2::TokenStream;
 //! # use quote::quote;
@@ -37,7 +37,7 @@
 //!
 //! # Using the `#[manyhow]` macro
 //! To activate the error hadling, just add [`#[manyhow]`](manyhow) above any
-//! proc macro implementation, reducing the above example to:
+//! proc-macro implementation, reducing the above example to:
 //!
 //! ```
 //! # use quote::quote;
@@ -53,6 +53,17 @@
 //! fn my_macro(input: TokenStream2) -> syn::Result<TokenStream2> {
 //!     // ..
 //! #   Ok(quote!())
+//! }
+//!
+//! // On top of the TokenStreams any type that implements `syn::Parse` is supported
+//! # let _ = quote!{
+//! #[manyhow(proc_macro_derive(MyMacro))]
+//! #[proc_macro]
+//! # };
+//! // The output can also be anything that implements `quote::ToTokens`
+//! fn my_derive_macro(input: syn::DeriveInput) -> manyhow::Result<syn::ItemImpl> {
+//!     // ..
+//! #   manyhow::bail!("hello")
 //! }
 //! ```
 //!
@@ -112,7 +123,7 @@
 //! pub fn actual_macro(input: TokenStream2) -> TokenStream2 {
 //!     // ...
 //! }
-//! // would expand to
+//! // would roughly expand to
 //! #[proc_macro]
 //! pub fn actual_macro(input: TokenStream) -> TokenStream {
 //!     actual_macro_impl(input.into()).into()
@@ -127,8 +138,12 @@
 //! adding `manyhow` with `default-features=false`.
 //!
 //! The usage is more or less the same, though with some added boilerplate from
-//! needing to invoke one of [`function`], [`attribute`] or [`derive`](derive())
-//! directly.
+//! needing to invoke one of [`function()`] ([`function!`]), [`attribute()`]
+//! ([`attribute!`]) or [`derive()`] ([`derive!`]) directly. For each version
+//! there exists a function and a `macro_rules` macro, while the function only
+//! supports [`proc_macro::TokenStream`] and [`proc_macro2::TokenStream`], the
+//! macro versions also support any type that implements [`Parse`]
+//! and [`ToTokens`] respectively.
 //!
 //! While the examples use closures, functions can be passed in as well. The
 //! above example would then change to:
@@ -142,6 +157,8 @@
 //! #[proc_macro]
 //! # };
 //! pub fn my_macro(input: TokenStream) -> TokenStream {
+//! # let tmp = input.clone();
+//! # let output: TokenStream = 
 //!     manyhow::function(
 //!         input,
 //!         false,
@@ -150,12 +167,23 @@
 //! #           Ok(quote!())
 //!         },
 //!     )
+//! # ;
+//! # let input = tmp;
+//!     // Or
+//!     manyhow::function!(
+//!         input,
+//!         |input: syn::DeriveInput| -> manyhow::Result<syn::ItemImpl> {
+//!             // ..
+//! #           manyhow::bail!("error")
+//!         },
+//!     )
 //! }
 //! ```
 //! [`Emitter`](#emitter-mut-emitter) and [dummy
-//! `TokenStream`](#dummy-mut-tokenstream) can also be used. [`function`] and
-//! [`attribute`] take an additional boolean parameter controlling whether the
-//! input/item will be used as initial dummy.
+//! `TokenStream`](#dummy-mut-tokenstream) can also be used. [`function()`]
+//! ([`function!`]) and [`attribute()`] ([`attribute!`]) take an additional
+//! boolean parameter controlling whether the input/item will be used as initial
+//! dummy.
 //!
 //! # `emitter: &mut Emitter`
 //! [`MacroHandler`]s (the trait defining what closures/functions can be used
@@ -203,7 +231,7 @@ use std::convert::Infallible;
 pub use macros::manyhow;
 use proc_macro2::TokenStream;
 #[cfg(doc)]
-use quote::ToTokens;
+use {quote::ToTokens, syn2::parse::Parse};
 
 extern crate proc_macro;
 
@@ -374,18 +402,82 @@ handler! {
 attribute; input: Input, item: Item; item_as_dummy, item
 }
 
+/// Handles [`proc_macro_attribute`](https://doc.rust-lang.org/reference/procedural-macros.html#attribute-macros)
+/// implementation
+///
+/// Takes any `TokenStream` for `input` and `item` and its return value. If
+/// `#[as_dummy]` is specified on item, it will be used as default
+/// dummy code on error. `body` takes a [`MacroHandler`] with two `TokenStream`
+/// or type implementing [`Parse`] parameters and returning a `TokenStream` or
+/// type implementing [`ToTokens`]. And an optional [`&mut Emitter`](Emitter)
+/// and a `&mut TokenStream` for storing a dummy output.
+///
+///
+/// ```
+/// # use proc_macro_utils::assert_tokens;
+/// # use quote::{quote, ToTokens};
+/// use manyhow::{attribute, Emitter, Result};
+/// use proc_macro2::TokenStream;
+/// # let input = quote!();
+/// # let item = quote!();
+/// # let output: TokenStream =
+/// attribute!(input, item, |input: TokenStream,
+///                          item: TokenStream,
+///                          dummy: &mut TokenStream,
+///                          emitter: &mut Emitter|
+///  -> Result {
+///     // ..
+///         # Ok(quote!())
+/// });
+/// ```
+///
+/// *Note:* When `#[as_dummy]` is specified the `dummy: &mut TokenStream` will
+/// be initialized with `item`. To override assign a new `TokenStream`:
+/// ```
+/// # use proc_macro_utils::assert_tokens;
+/// # use syn2 as syn;
+/// use manyhow::{attribute, Result, SilentError};
+/// use proc_macro2::TokenStream;
+/// use quote::{quote, ToTokens};
+/// # let input = quote!(input);
+/// let item = quote!(
+///     struct Struct;
+/// );
+/// let output: TokenStream = attribute!(
+///     input,
+///     #[as_dummy]
+///     item,
+///     |input: TokenStream,
+///      item: syn::ItemStruct,
+///      dummy: &mut TokenStream|
+///      -> Result<syn::ItemStruct, SilentError> {
+///         assert_tokens!(dummy.to_token_stream(), {
+///             struct Struct;
+///         });
+///         *dummy = quote! {
+///             struct Struct(HelloWorld);
+///         };
+///         // ..
+///         Err(SilentError)
+///     },
+/// );
+///
+/// assert_tokens! {output, {struct Struct(HelloWorld);}};
+/// ```
 #[macro_export]
 macro_rules! attribute {
-    (#item_as_dummy $input:expr, $item:expr, $impl:expr) => {
+    ($input:expr, #[as_dummy] $item:expr, $impl:expr $(,)?) => {
         $crate::__macro_handler!{attribute_transparent; #attr=true input: $input, item: $item.clone(); $impl; dummy: $item}
     };
-    ($input:expr, $item:expr, $impl:expr) => {
+    ($input:expr, $item:expr, $impl:expr $(,)?) => {
         $crate::__macro_handler!{attribute_transparent; #attr=true input: $input, item: $item; $impl; dummy}
     };
 }
 
 /// Handles [`proc_macro_derive`](https://doc.rust-lang.org/reference/procedural-macros.html#derive-macros)
-/// implementation
+/// implementation.
+///
+/// Use [`derive!`] to support [`Parse`] and [`ToTokens`] as well.
 ///
 /// Takes any `TokenStream` for `item` and returns any `TokenStream`. `body`
 /// takes a [`MacroHandler`] with one `TokenStream` parameter. And an optional
@@ -432,15 +524,42 @@ pub fn derive<
     tokens.into()
 }
 
+/// Handles [`proc_macro_derive`](https://doc.rust-lang.org/reference/procedural-macros.html#derive-macros)
+/// implementation.
+///
+/// Takes any `TokenStream` for `item` and returns any `TokenStream`. `body`
+/// takes a [`MacroHandler`] with one `TokenStream` or type implementing
+/// [`Parse`] parameter and returns a `TokenStream` or type implementing
+/// [`ToTokens`]. And an optional [`&mut Emitter`](Emitter) and `&mut
+/// TokenStream` for storing a dummy output.
+///
+/// ```
+/// # use proc_macro_utils::assert_tokens;
+/// # use quote::{quote, ToTokens};
+/// # use syn2 as syn;
+/// use manyhow::{derive, Emitter, Result};
+/// use proc_macro2::TokenStream;
+/// # let item = quote!();
+/// # let output: TokenStream =
+/// derive!(item, |item: syn::DeriveInput,
+///                dummy: &mut TokenStream,
+///                emitter: &mut Emitter|
+///  -> Result {
+///     // ..
+///         # Ok(quote!())
+/// });
+/// ```
 #[macro_export]
 macro_rules! derive {
-    ($item:expr, $impl:expr) => {
+    ($item:expr, $impl:expr $(,)?) => {
         $crate::__macro_handler! {derive_transparent; item: $item; $impl}
     };
 }
 
 /// Handles function like [`proc_macro`](https://doc.rust-lang.org/reference/procedural-macros.html#function-like-procedural-macros)
 /// implementation
+///
+/// Use [`function!`] to support [`Parse`] and [`ToTokens`] as well.
 ///
 /// Takes any `TokenStream` for `input` and returns any
 /// `TokenStream`. If `input_as_dummy = true` the item input will be used as
@@ -522,12 +641,67 @@ pub fn function<
     tokens.into()
 }
 
+/// Handles function like [`proc_macro`](https://doc.rust-lang.org/reference/procedural-macros.html#function-like-procedural-macros)
+/// implementation
+///
+/// Takes any `TokenStream` for `input` and returns any `TokenStream`. If
+/// `#[as_dummy]` is specified on input, it will be used as default
+/// dummy code on error. `body` takes a [`MacroHandler`] with one `TokenStream`
+/// or type implementing [`Parse`] parameter and returns a `TokenStream` or type
+/// implementing [`ToTokens`]. And an optional [`&mut Emitter`](Emitter) and a
+/// `&mut TokenStream` for storing a dummy output.
+///
+/// ```
+/// # use proc_macro_utils::assert_tokens;
+/// # use quote::{quote, ToTokens};
+/// # use syn2 as syn;
+/// use manyhow::{function, Emitter, Result};
+/// use proc_macro2::TokenStream;
+/// # let input = quote!();
+/// # let output: TokenStream =
+/// function!(input, |input: syn::Item,
+///                   dummy: &mut TokenStream,
+///                   emitter: &mut Emitter|
+///  -> Result<syn::ItemImpl> {
+///     // ..
+///         # manyhow::bail!("unimplemented")
+/// });
+/// ```
+///
+/// *Note:* When `#[as_dummy]` is specified on the input, the `dummy: &mut
+/// TokenStream` will be initialized with `input`. To override assign a new
+/// `TokenStream`:
+///
+/// ```
+/// use proc_macro_utils::assert_tokens;
+/// use manyhow::{function, Result, SilentError};
+/// use proc_macro2::TokenStream;
+/// use quote::{quote, ToTokens};
+///
+/// let input = quote!(some input);
+/// let output: TokenStream = function!(
+///     #[as_dummy] input,
+///     |input: TokenStream, dummy: &mut TokenStream|
+///      -> Result<TokenStream, SilentError> {
+///         assert_tokens!(dummy.to_token_stream(), {
+///             some input
+///         });
+///         *dummy = quote! {
+///             another input
+///         };
+///         // ..
+///         Err(SilentError)
+///     },
+/// );
+///
+/// assert_tokens! {output, {another input}};
+/// ```
 #[macro_export]
 macro_rules! function {
-    (#input_as_dummy $input:expr, $impl:expr) => {
+    (#[as_dummy] $input:expr, $impl:expr $(,)?) => {
         $crate::__macro_handler! {function_transparent; input: $input; $impl; dummy: $input}
     };
-    ($input:expr, $impl:expr) => {
+    ($input:expr, $impl:expr $(,)?) => {
         $crate::__macro_handler! {function_transparent; input: $input; $impl; dummy}
     };
 }
@@ -551,7 +725,7 @@ fn function_macro() {
     #[cfg(feature = "syn2")]
     {
         use quote::ToTokens;
-        let output: TokenStream = function!(#input_as_dummy quote!(hello;), |input: syn2::LitInt| -> TokenStream {
+        let output: TokenStream = function!(#[as_dummy] quote!(hello;), |input: syn2::LitInt| -> TokenStream {
             input.into_token_stream()
         });
         assert_eq!(

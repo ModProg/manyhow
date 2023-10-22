@@ -1,3 +1,4 @@
+#![allow(missing_docs, clippy::pedantic)]
 use std::marker::PhantomData;
 
 use proc_macro2::TokenStream;
@@ -14,16 +15,16 @@ pub struct WhatType<T>(PhantomData<T>);
 impl<T> WhatType<T> {
     /// Always panics
     pub fn identify(&self) -> Result<T, TokenStream> {
-        panic!("DON'T YOU DARE CALL ME")
+        unimplemented!("DON'T YOU DARE CALL ME")
     }
 
     pub fn from(_ty: &T) -> Self {
-        Self(Default::default())
+        Self(PhantomData)
     }
 
     #[allow(clippy::new_without_default)]
     pub fn new() -> Self {
-        Self(Default::default())
+        Self(PhantomData)
     }
 }
 

@@ -30,6 +30,7 @@ darling = ["darling_core"]
 [dev-dependencies]
 proc-macro-utils = "0.8.0"
 proc-macro2 = { version = "1", features = ["span-locations"] }
+syn2 = {package = "syn", version = "2", features = ["full"]}
 
 [package.metadata.docs.rs]
 all-features = true
