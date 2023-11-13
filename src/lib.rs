@@ -252,7 +252,7 @@ pub mod __private {
     use proc_macro2::TokenStream;
     pub use quote;
 
-    pub use crate::span_ranged::{SpanRangedToSpanRange, ToTokensToSpanRange};
+    pub use crate::span_ranged::*;
     pub type Dummy = Option<TokenStream>;
 
     pub use crate::parse_to_tokens::*;

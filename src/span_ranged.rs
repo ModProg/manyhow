@@ -76,6 +76,12 @@ impl<T: SpanRanged> SpanRanged for Option<T> {
     }
 }
 
+impl<A: SpanRanged, B: SpanRanged> SpanRanged for (A, B) {
+    fn span_range(&self) -> Range<Span> {
+        (self.0.span_range().start)..(self.1.span_range().end)
+    }
+}
+
 impl SpanRanged for Span {
     fn span_range(&self) -> Range<Span> {
         *self..*self
@@ -152,5 +158,42 @@ impl<T: ToTokens> ToTokensToSpanRange for T {
             .as_ref()
             .map_or(first, proc_macro2::TokenTree::span);
         first..last
+    }
+}
+
+#[doc(hidden)]
+pub trait ToTokensTupleToSpanRange {
+    #[allow(non_snake_case)]
+    fn FIRST_ARG_MUST_IMPLEMENT_SpanRanged_OR_ToTokens(&self) -> Range<Span>;
+}
+impl<A: ToTokens, B: ToTokens> ToTokensTupleToSpanRange for (A, B) {
+    #[allow(non_snake_case)]
+    fn FIRST_ARG_MUST_IMPLEMENT_SpanRanged_OR_ToTokens(&self) -> Range<Span> {
+        let first = self
+            .0
+            .to_token_stream()
+            .into_iter()
+            .next()
+            .as_ref()
+            .map_or_else(proc_macro2::Span::call_site, proc_macro2::TokenTree::span);
+
+        let last = self
+            .1
+            .to_token_stream()
+            .into_iter()
+            .last()
+            .as_ref()
+            .map_or(first, proc_macro2::TokenTree::span);
+
+        first..last
+    }
+}
+
+#[cfg(test)]
+mod test {
+    #[test]
+    fn test() {
+        span_range!(1);
+        span_range!((1, 2));
     }
 }
