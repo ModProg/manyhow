@@ -64,9 +64,15 @@ pub trait SpanRanged {
 
     /// Returns [`Self::span_range`] as a single span if possible, currently
     /// only possible on nightly. [more](proc_macro2::Span::join)
-    fn joined(&self) -> Option<Span> {
+    fn span_joined(&self) -> Option<Span> {
         let range = self.span_range();
         range.start.join(range.end)
+    }
+
+    #[doc(hidden)]
+    #[deprecated]
+    fn joined(&self) -> Option<Span> {
+        self.span_joined()
     }
 }
 
