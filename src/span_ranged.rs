@@ -61,6 +61,13 @@ macro_rules! span_range {
 pub trait SpanRanged {
     /// Returns the [`Range`](Range)[`<Span>`](Span) fully encompasing `self`
     fn span_range(&self) -> Range<Span>;
+
+    /// Returns [`Self::span_range`] as a single span if possible, currently
+    /// only possible on nightly. [more](proc_macro2::Span::join)
+    fn joined(&self) -> Option<Span> {
+        let range = self.span_range();
+        range.start.join(range.end)
+    }
 }
 
 impl<T: SpanRanged> SpanRanged for &T {
