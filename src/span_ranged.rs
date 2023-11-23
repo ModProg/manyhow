@@ -105,14 +105,10 @@ impl SpanRanged for proc_macro::Span {
         (*self).into()..(*self).into()
     }
 }
-impl SpanRanged for Range<Span> {
+
+impl<T: SpanRanged> SpanRanged for Range<T> {
     fn span_range(&self) -> Range<Span> {
-        self.clone()
-    }
-}
-impl SpanRanged for Range<proc_macro::Span> {
-    fn span_range(&self) -> Range<Span> {
-        self.start.into()..self.end.into()
+        self.start.span_range().start..self.end.span_range().end
     }
 }
 
