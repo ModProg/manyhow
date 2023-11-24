@@ -4,9 +4,10 @@ use std::marker::PhantomData;
 use proc_macro2::TokenStream;
 
 use crate::{AnyTokenStream, Emitter, MacroHandler, ToTokensError};
-pub trait ParseToTokens<T> {
+pub trait ManyhowParse<T> {
     fn manyhow_parse(&self, input: impl AnyTokenStream, attr: bool) -> Result<T, TokenStream>;
-    #[allow(clippy::wrong_self_convention)]
+}
+pub trait ManyhowToTokens<T> {
     fn manyhow_into_token_stream(&self, input: T, tokens: TokenStream) -> TokenStream;
 }
 
@@ -36,11 +37,13 @@ impl<T> Clone for WhatType<T> {
 
 impl<T> Copy for WhatType<T> {}
 
-impl<T: Into<TokenStream> + From<TokenStream>> ParseToTokens<T> for WhatType<T> {
+impl<T: Into<TokenStream> + From<TokenStream>> ManyhowParse<T> for WhatType<T> {
     fn manyhow_parse(&self, input: impl AnyTokenStream, _attr: bool) -> Result<T, TokenStream> {
         Ok(input.into().into())
     }
+}
 
+impl<T: Into<TokenStream> + From<TokenStream>> ManyhowToTokens<T> for WhatType<T> {
     fn manyhow_into_token_stream(&self, input: T, mut tokens: TokenStream) -> TokenStream {
         tokens.extend(input.into());
         tokens
@@ -48,7 +51,7 @@ impl<T: Into<TokenStream> + From<TokenStream>> ParseToTokens<T> for WhatType<T> 
 }
 
 #[cfg(feature = "syn2")]
-impl<T: syn2::parse::Parse + quote::ToTokens> ParseToTokens<T> for &WhatType<T> {
+impl<T: syn2::parse::Parse> ManyhowParse<T> for &WhatType<T> {
     fn manyhow_parse(&self, input: impl AnyTokenStream, attr: bool) -> Result<T, TokenStream> {
         let input = input.into();
         let empty = input.is_empty();
@@ -61,7 +64,9 @@ impl<T: syn2::parse::Parse + quote::ToTokens> ParseToTokens<T> for &WhatType<T> 
             e
         })
     }
-
+}
+#[cfg(feature = "syn2")]
+impl<T: quote::ToTokens> ManyhowToTokens<T> for &WhatType<T> {
     fn manyhow_into_token_stream(&self, input: T, mut tokens: TokenStream) -> TokenStream {
         input.to_tokens(&mut tokens);
         tokens
@@ -72,6 +77,8 @@ impl<T: syn2::parse::Parse + quote::ToTokens> ParseToTokens<T> for &WhatType<T> 
 #[test]
 #[allow(unused)]
 fn test_inference() {
+    use syn2::parse::Parse;
+
     if false {
         let wt = &WhatType::new();
         let ts: proc_macro::TokenStream = wt.manyhow_parse(quote::quote!(test), false).unwrap();
@@ -80,6 +87,16 @@ fn test_inference() {
             let wt: Result<syn2::Ident, _> = wt.identify();
         }
         let ts: syn2::Ident = wt.manyhow_parse(quote::quote!(test), false).unwrap();
+
+        struct Parsable;
+        impl Parse for Parsable {
+            fn parse(input: syn2::parse::ParseStream) -> syn2::Result<Self> {
+                todo!()
+            }
+        }
+        let wt = &WhatType::new();
+        let _: Result<Parsable, _> = wt.identify();
+        let ts = wt.manyhow_parse(quote::quote!(test), false).unwrap();
     }
 }
 

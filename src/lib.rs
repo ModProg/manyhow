@@ -158,7 +158,7 @@
 //! # };
 //! pub fn my_macro(input: TokenStream) -> TokenStream {
 //! # let tmp = input.clone();
-//! # let output: TokenStream = 
+//! # let output: TokenStream =
 //!     manyhow::function(
 //!         input,
 //!         false,
@@ -311,7 +311,7 @@ macro_rules! __macro_handler {
         $crate::__macro_handler! {! $name; $($(#attr=$attr)? $n: $input),+; $impl; $crate::__private::Dummy::None}
     };
     (! $name:ident; $($(#attr=$attr:tt)? $n:ident: $input:expr),+; $impl:expr $(; $dummy:expr)?) => {{
-        use $crate::__private::ParseToTokens;
+        use $crate::__private::{ManyhowParse, ManyhowToTokens};
         let implementation = $impl;
         $(let $n = &$crate::__private::WhatType::new();)+
         if false {
@@ -725,9 +725,11 @@ fn function_macro() {
     #[cfg(feature = "syn2")]
     {
         use quote::ToTokens;
-        let output: TokenStream = function!(#[as_dummy] quote!(hello;), |input: syn2::LitInt| -> TokenStream {
-            input.into_token_stream()
-        });
+        let output: TokenStream = function!(
+            #[as_dummy]
+            quote!(hello;),
+            |input: syn2::LitInt| -> TokenStream { input.into_token_stream() }
+        );
         assert_eq!(
             output.to_string(),
             quote!(hello; ::core::compile_error! { "expected integer literal" }).to_string()
