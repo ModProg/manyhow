@@ -221,6 +221,7 @@
 //!
 //! # Crate features
 //!
+//! - `macros` **default** Enables [`#[manyhow]`](macros::manyhow) attribute macro.
 //! - `syn`/`syn2` **default** Enables errors for [`syn` 2.x](https://docs.rs/syn/latest/syn/).
 //! - `syn1` Enables errors for [`syn` 1.x](https://docs.rs/syn/1.0.109/syn/index.html).
 //! - `darling` Enables erros for [`darling`](https://docs.rs/darling/latest/index.html).
