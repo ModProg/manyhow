@@ -55,7 +55,7 @@
 //! #   Ok(quote!())
 //! }
 //!
-//! // On top of the TokenStreams any type that implements `syn::Parse` is supported
+//! // On top of the TokenStreams any type that implements [`Parse`] is supported
 //! # let _ = quote!{
 //! #[manyhow(proc_macro_derive(MyMacro))]
 //! #[proc_macro]
@@ -186,9 +186,9 @@
 //! dummy.
 //!
 //! # `emitter: &mut Emitter`
-//! [`MacroHandler`]s (the trait defining what closures/functions can be used
-//! with `manyhow`) can take a mutable reference to an [`Emitter`]. This
-//! allows collecting errors, but not fail immediately.
+//! [`*MacroHandler`](FunctionMacroHandler)s (the traits defining what
+//! closures/functions can be used with `manyhow`) can take a mutable reference
+//! to an [`Emitter`]. This allows collecting errors, but not fail immediately.
 //!
 //! [`Emitter::into_result`] can be used to return if an [`Emitter`] contains
 //! any values.
@@ -213,20 +213,20 @@
 //! ```
 //!
 //! # `dummy: &mut TokenStream`
-//! [`MacroHandler`]s also take a mutable reference to a `TokenStream`, to
-//! enable emitting some dummy code to be used in case the macro errors.
+//! [`*MacroHandler`](FunctionMacroHandler)s can also take a mutable reference
+//! to a `TokenStream`, to enable emitting some dummy code to be used in case
+//! the macro errors.
 //!
 //! This allows either appending tokens e.g., with [`ToTokens::to_tokens`] or
 //! directly setting the dummy code e.g., `*dummy = quote!{some tokens}`.
 //!
 //! # Crate features
 //!
-//! - `macros` **default** Enables [`#[manyhow]`](macros::manyhow) attribute macro.
+//! - `macros` **default** Enables [`#[manyhow]`](macros::manyhow) attribute
+//!   macro.
 //! - `syn`/`syn2` **default** Enables errors for [`syn` 2.x](https://docs.rs/syn/latest/syn/).
 //! - `syn1` Enables errors for [`syn` 1.x](https://docs.rs/syn/1.0.109/syn/index.html).
 //! - `darling` Enables erros for [`darling`](https://docs.rs/darling/latest/index.html).
-
-use std::convert::Infallible;
 
 #[cfg(feature = "macros")]
 pub use macros::manyhow;
@@ -265,43 +265,6 @@ pub trait AnyTokenStream: Clone + From<TokenStream> + Into<TokenStream> + Defaul
 impl AnyTokenStream for TokenStream {}
 impl AnyTokenStream for proc_macro::TokenStream {}
 
-macro_rules! handler {
-    ($(#$doc:tt)*$name:ident; $($input:ident: $Input:ident),*; $($dummy:ident, $dummy_value:ident)?) => {
-        $(#$doc)*
-        pub fn $name<
-            $($Input: AnyTokenStream,)*
-            Output: AnyTokenStream,
-            Return: AnyTokenStream,
-            Error: ToTokensError,
-            Function,
-        >(
-            $($input: impl AnyTokenStream,)*
-            $($dummy: bool,)?
-            body: impl MacroHandler<($($Input,)*), Output, Output, Function, Error>,
-        ) -> Return {
-            #[allow(unused_mut)]
-            let mut tokens = Output::default();
-            $(let mut tokens = if $dummy {
-                $dummy_value.clone().into().into()
-            } else {
-                tokens
-            };)?
-            let mut emitter = Emitter::new();
-            let output = body.call(($($input.into().into(),)*), &mut tokens, &mut emitter);
-            let mut tokens = tokens.into();
-            let mut tokens = match output {
-                Ok(tokens) => tokens.into(),
-                Err(error) => {
-                    error.to_tokens(&mut tokens);
-                    tokens
-                }
-            };
-            emitter.to_tokens(&mut tokens);
-            tokens.into()
-        }
-    };
-}
-
 #[macro_export]
 #[doc(hidden)]
 macro_rules! __macro_handler {
@@ -312,7 +275,7 @@ macro_rules! __macro_handler {
         $crate::__macro_handler! {! $name; $($(#attr=$attr)? $n: $input),+; $impl; $crate::__private::Dummy::None}
     };
     (! $name:ident; $($(#attr=$attr:tt)? $n:ident: $input:expr),+; $impl:expr $(; $dummy:expr)?) => {{
-        use $crate::__private::{ManyhowParse, ManyhowToTokens};
+        use $crate::__private::{ManyhowParse, ManyhowToTokens, ManyhowTry};
         let implementation = $impl;
         $(let $n = &$crate::__private::WhatType::new();)+
         if false {
@@ -327,23 +290,26 @@ macro_rules! __macro_handler {
             )+ $($dummy,)? implementation)
             {
                 Err(tokens) => tokens.into(),
-                Ok((output, tokens)) => (&$crate::__private::WhatType::from(&output))
-                    .manyhow_into_token_stream(output, tokens)
-                    .into(),
+                Ok((output, mut tokens)) => {
+                    match (&$crate::__private::WhatType::from(&output)).manyhow_try(output) {
+                        Err(error) => (&$crate::__private::WhatType::from(&error)).manyhow_to_tokens(error, &mut tokens),
+                        Ok(output) => (&$crate::__private::WhatType::from(&output)).manyhow_to_tokens(output, &mut tokens),
+                    };
+                    tokens.into()
+                }
             }
         }
     }};
 }
 
-handler! {
 /// Handles [`proc_macro_attribute`](https://doc.rust-lang.org/reference/procedural-macros.html#attribute-macros)
 /// implementation
 ///
 /// Takes any `TokenStream` for `input` and `item` and returns any
 /// `TokenStream`. If `item_as_dummy = true` the item input will be used as
-/// default dummy code on error. `body` takes a [`MacroHandler`] with two
-/// `TokenStream` parameters. And an optional [`&mut Emitter`](Emitter) and a
-/// `&mut TokenStream` for storing a dummy output.
+/// default dummy code on error. `body` takes a [`AttributeMacroHandler`] with
+/// two `TokenStream` parameters. And an optional [`&mut Emitter`](Emitter) and
+/// a `&mut TokenStream` for storing a dummy output.
 ///
 /// ```
 /// # use proc_macro_utils::assert_tokens;
@@ -400,7 +366,49 @@ handler! {
 ///
 /// assert_tokens! {output, {struct Struct(HelloWorld);}};
 /// ```
-attribute; input: Input, item: Item; item_as_dummy, item
+pub fn attribute<
+    Input: AnyTokenStream,
+    Item: AnyTokenStream,
+    Dummy: AnyTokenStream,
+    Output: MacroOutput,
+    Return: AnyTokenStream,
+    Function,
+>(
+    input: impl AnyTokenStream,
+    item: impl AnyTokenStream,
+    item_as_dummy: bool,
+    body: impl AttributeMacroHandler<
+        Function,
+        Item = Item,
+        Input = Input,
+        Dummy = Dummy,
+        Output = Output,
+    >,
+) -> Return {
+    #[allow(unused_mut)]
+    let mut tokens = Dummy::default();
+    let mut tokens = if item_as_dummy {
+        item.clone().into().into()
+    } else {
+        tokens
+    };
+    let mut emitter = Emitter::new();
+    let output = body.call(
+        input.into().into(),
+        item.into().into(),
+        &mut tokens,
+        &mut emitter,
+    );
+    let mut tokens = tokens.into();
+    let mut tokens = match output.convert() {
+        Ok(tokens) => tokens,
+        Err(error) => {
+            error.to_tokens(&mut tokens);
+            tokens
+        }
+    };
+    emitter.to_tokens(&mut tokens);
+    tokens.into()
 }
 
 /// Handles [`proc_macro_attribute`](https://doc.rust-lang.org/reference/procedural-macros.html#attribute-macros)
@@ -408,10 +416,10 @@ attribute; input: Input, item: Item; item_as_dummy, item
 ///
 /// Takes any `TokenStream` for `input` and `item` and its return value. If
 /// `#[as_dummy]` is specified on item, it will be used as default
-/// dummy code on error. `body` takes a [`MacroHandler`] with two `TokenStream`
-/// or type implementing [`Parse`] parameters and returning a `TokenStream` or
-/// type implementing [`ToTokens`]. And an optional [`&mut Emitter`](Emitter)
-/// and a `&mut TokenStream` for storing a dummy output.
+/// dummy code on error. `body` takes a [`AttributeMacroHandler`] with two
+/// `TokenStream`s or types implementing [`Parse`] parameters and returning a
+/// `TokenStream` or type implementing [`ToTokens`]. And an optional [`&mut
+/// Emitter`](Emitter) and a `&mut TokenStream` for storing a dummy output.
 ///
 ///
 /// ```
@@ -481,9 +489,9 @@ macro_rules! attribute {
 /// Use [`derive!`] to support [`Parse`] and [`ToTokens`] as well.
 ///
 /// Takes any `TokenStream` for `item` and returns any `TokenStream`. `body`
-/// takes a [`MacroHandler`] with one `TokenStream` parameter. And an optional
-/// [`&mut Emitter`](Emitter) and `&mut TokenStream` for storing a dummy
-/// output.
+/// takes a [`DeriveMacroHandler`] with one `TokenStream` parameter. And an
+/// optional [`&mut Emitter`](Emitter) and `&mut TokenStream` for storing a
+/// dummy output.
 ///
 /// ```
 /// # use proc_macro_utils::assert_tokens;
@@ -502,20 +510,20 @@ macro_rules! attribute {
 /// ```
 pub fn derive<
     Item: AnyTokenStream,
-    Output: AnyTokenStream,
+    Dummy: AnyTokenStream,
+    Output: MacroOutput,
     Return: AnyTokenStream,
-    Error: ToTokensError,
     Function,
 >(
     item: impl AnyTokenStream,
-    body: impl MacroHandler<(Item,), Output, Output, Function, Error>,
+    body: impl DeriveMacroHandler<Function, Item = Item, Dummy = Dummy, Output = Output>,
 ) -> Return {
-    let mut tokens = TokenStream::default().into();
+    let mut tokens = Dummy::default();
     let mut emitter = Emitter::new();
-    let output = body.call((item.into().into(),), &mut tokens, &mut emitter);
+    let output = body.call(item.into().into(), &mut tokens, &mut emitter);
     let mut tokens = tokens.into();
-    let mut tokens = match output {
-        Ok(tokens) => tokens.into(),
+    let mut tokens = match output.convert() {
+        Ok(tokens) => tokens,
         Err(error) => {
             error.to_tokens(&mut tokens);
             tokens
@@ -529,7 +537,7 @@ pub fn derive<
 /// implementation.
 ///
 /// Takes any `TokenStream` for `item` and returns any `TokenStream`. `body`
-/// takes a [`MacroHandler`] with one `TokenStream` or type implementing
+/// takes a [`DeriveMacroHandler`] with one `TokenStream` or type implementing
 /// [`Parse`] parameter and returns a `TokenStream` or type implementing
 /// [`ToTokens`]. And an optional [`&mut Emitter`](Emitter) and `&mut
 /// TokenStream` for storing a dummy output.
@@ -564,8 +572,8 @@ macro_rules! derive {
 ///
 /// Takes any `TokenStream` for `input` and returns any
 /// `TokenStream`. If `input_as_dummy = true` the item input will be used as
-/// default dummy code on error. `body` takes a [`MacroHandler`] with one
-/// `TokenStream` parameter. And an optional [`&mut Emitter`](Emitter) and a
+/// default dummy code on error. `body` takes a [`FunctionMacroHandler`] with
+/// one `TokenStream` parameter. And an optional [`&mut Emitter`](Emitter) and a
 /// `&mut TokenStream` for storing a dummy output.
 ///
 /// ```
@@ -614,25 +622,25 @@ macro_rules! derive {
 /// ```
 pub fn function<
     Input: AnyTokenStream,
-    Output: AnyTokenStream,
+    Dummy: AnyTokenStream,
+    Output: MacroOutput,
     Return: AnyTokenStream,
-    Error: ToTokensError,
     Function,
 >(
     input: impl AnyTokenStream,
     input_as_dummy: bool,
-    body: impl MacroHandler<(Input,), Output, Output, Function, Error>,
+    body: impl FunctionMacroHandler<Function, Input = Input, Dummy = Dummy, Output = Output>,
 ) -> Return {
-    let mut tokens: Output = if input_as_dummy {
+    let mut tokens = if input_as_dummy {
         input.clone().into().into()
     } else {
-        TokenStream::default().into()
+        Dummy::default()
     };
     let mut emitter = Emitter::new();
-    let output = body.call((input.into().into(),), &mut tokens, &mut emitter);
+    let output = body.call(input.into().into(), &mut tokens, &mut emitter);
     let mut tokens = tokens.into();
-    let mut tokens = match output {
-        Ok(tokens) => tokens.into(),
+    let mut tokens = match output.convert() {
+        Ok(tokens) => tokens,
         Err(error) => {
             error.to_tokens(&mut tokens);
             tokens
@@ -647,10 +655,10 @@ pub fn function<
 ///
 /// Takes any `TokenStream` for `input` and returns any `TokenStream`. If
 /// `#[as_dummy]` is specified on input, it will be used as default
-/// dummy code on error. `body` takes a [`MacroHandler`] with one `TokenStream`
-/// or type implementing [`Parse`] parameter and returns a `TokenStream` or type
-/// implementing [`ToTokens`]. And an optional [`&mut Emitter`](Emitter) and a
-/// `&mut TokenStream` for storing a dummy output.
+/// dummy code on error. `body` takes a [`FunctionMacroHandler`] with one
+/// `TokenStream` or type implementing [`Parse`] parameter and returns a
+/// `TokenStream` or type implementing [`ToTokens`]. And an optional [`&mut
+/// Emitter`](Emitter) and a `&mut TokenStream` for storing a dummy output.
 ///
 /// ```
 /// # use proc_macro_utils::assert_tokens;
@@ -742,63 +750,97 @@ fn function_macro() {
     }
 }
 
-/// Implementation of a proc-macro
-///
-/// Note: for `TokenStream` either [`proc_macro::TokenStream`] or
-/// [`proc_macro2::TokenStream`] can be used.
-///
-/// Trait is implemented for any [`function`](FnOnce), taking in either one (for
-/// derive or function like macros) or two (for attribute macros) `TokenStream`s
-/// and returns either a `TokenStream` or a [`Result<TokenStream, impl
-/// ToTokensError>`](ToTokensError).
-///
-/// Additionally they can take optionally in any order a [`&mut
-/// Emitter`](Emitter) which allows emitting errors without returning early. And
-/// a `&mut TokenStream` to return a dummy `TokenStream` on failure, note that
-/// this `TokenStream` must be the same type as the one returned.
-pub trait MacroHandler<Input, Dummy, Output, Function, Error = Infallible> {
-    #[allow(clippy::missing_errors_doc, missing_docs)]
-    fn call(self, input: Input, dummy: &mut Dummy, emitter: &mut Emitter) -> Result<Output, Error>;
-}
+macro_rules! macro_input {
+    ($MacroInput:ident; $($input:ident: $Input:ident),+; $a:literal; $name:literal; $token_streams:literal) => {
+        /// Input of
+        #[doc = $a]
+        #[doc = $name]
+        /// proc-macro
+        ///
+        /// Note: for `TokenStream` either [`proc_macro::TokenStream`] or
+        /// [`proc_macro2::TokenStream`] can be used.
+        ///
+        /// Trait is implemented for any [`function`](FnOnce), taking in
+        #[doc = concat!($token_streams, ".")]
+        /// Additionally they can take optionally in any order a [`&mut
+        /// Emitter`](Emitter) which allows emitting errors without returning early. And
+        /// a `&mut TokenStream` to return a dummy `TokenStream` on failure.
+        ///
+        /// When used with
+        #[doc = concat!("[`", $name, "()`]")]
+        /// it must return a type implementing [`MacroOutput`], with
+        #[doc = concat!("[`", $name, "!`]")]
+        /// it can accept types implementing [`Parse`] and return types
+        /// implementing [`ToTokens`](quote::ToTokens).
+        #[allow(missing_docs)]
+        pub trait $MacroInput<Function> {
+            $(type $Input;)+
+            type Dummy;
+            type Output;
+            #[allow(clippy::missing_errors_doc)]
+            fn call(
+                self,
+                $(item: Self::$Input,)+
+                dummy: &mut Self::Dummy,
+                emitter: &mut Emitter,
+            ) -> Self::Output;
+        }
 
-macro_rules! impl_attribute_macro {
-    ($dummy:ident, $emitter:ident =>
-        $(<$($Inputs:ident $(:$Bound:ident)?),+>(($($in_id:ident),+):($($in_ty:ty),+)$(, $ident:ident:$ty:ty)*), $Dummy:ident;)+) => {
-        $(
-        // NOTE: This `Clone` is just a marker to make this != Emitter
-        impl<$($Inputs $(:$Bound)?,)+ Output: Clone, F> MacroHandler<($($in_ty,)+), $Dummy, Output, ($($in_ty,)* $($ty,)* Output)> for F
-        where
-            F: FnOnce($($in_ty,)+ $($ty,)*) -> Output
-        {
-            #[allow(unused)]
-            fn call(self, ($($in_id,)+): ($($in_ty,)+), $dummy: &mut $Dummy, $emitter: &mut Emitter) -> Result<Output, Infallible> {
-                Ok(self($($in_id,)+ $($ident),*))
-            }
-        }
-        // NOTE: This `Clone` is just a marker to make this != Emitter
-        impl<$($Inputs $(:$Bound)?,)+ Output: Clone, F, Error> MacroHandler<($($in_ty,)+), $Dummy, Output, ($($in_ty,)* $($ty,)* Result<Output, Error>), Error> for F
-        where
-            F: FnOnce($($in_ty,)+ $($ty,)*) -> Result<Output, Error>
-        {
-            #[allow(unused)]
-            fn call(self, ($($in_id,)+): ($($in_ty,)+), $dummy: &mut $Dummy, $emitter: &mut Emitter) -> Result<Output, Error> {
-                self($($in_id,)+ $($ident),*)
-            }
-        }
-        )*
+        macro_input_impl!([$($Input,)+ Dummy: Clone]; $MacroInput; $($input: $Input),*; &mut Dummy, &mut Emitter; dummy: Dummy dummy; emitter emitter);
+        macro_input_impl!([$($Input,)+ Dummy: Clone]; $MacroInput; $($input: $Input),*; &mut Dummy; dummy: Dummy dummy; _emitter);
+        macro_input_impl!([$($Input),+]; $MacroInput; $($input: $Input),*; &mut Emitter; _dummy: TokenStream; emitter emitter);
+        macro_input_impl!([$($Input),+]; $MacroInput; $($input: $Input),*; ; _dummy: TokenStream; _emitter);
     };
 }
 
-impl_attribute_macro! {
-    dummy, emitter =>
-    <Input, Item, Dummy: Clone> ((input, item): (Input, Item), dummy: &mut Dummy), Dummy;
-    <Input, Item> ((input, item): (Input, Item)), TokenStream;
-    <Input, Item, Dummy: Clone> ((input, item): (Input, Item), dummy: &mut Dummy, emitter: &mut Emitter), Dummy;
-    <Input, Item> ((input, item): (Input, Item), emitter: &mut Emitter), TokenStream;
-    <Input, Item, Dummy: Clone> ((input, item): (Input, Item), emitter: &mut Emitter, dummy: &mut Dummy), Dummy;
-    <Input, Dummy: Clone> ((input): (Input), dummy: &mut Dummy), Dummy;
-    <Input> ((input): (Input)), TokenStream;
-    <Input, Dummy: Clone> ((input): (Input), dummy: &mut Dummy, emitter: &mut Emitter), Dummy;
-    <Input> ((input): (Input), emitter: &mut Emitter), TokenStream;
-    <Input, Dummy: Clone> ((input): (Input), emitter: &mut Emitter, dummy: &mut Dummy), Dummy;
+macro_rules! macro_input_impl {
+    ([$($gen:tt)*]; $MacroInput:ident; $($input:ident: $Input:ident),+; $($Extra:ty),*; $dummy1:ident: $Dummy:ident $($dummy2:ident)?; $emitter1:ident $($emitter2:ident)?) => {
+        impl<$($gen)*, Output, Function> $MacroInput<($($Input,)+ $($Extra,)* Output)> for Function
+        where
+            Function: Fn($($Input,)+ $($Extra,)*) -> Output,
+        {
+            type Dummy = $Dummy;
+            $(type $Input = $Input;)*
+            type Output = Output;
+
+            fn call(
+                self,
+                $($input: Self::$Input,)*
+                $dummy1: &mut Self::Dummy,
+                $emitter1: &mut Emitter,
+            ) -> Self::Output {
+                self($($input,)+ $($dummy2,)? $($emitter2,)?)
+            }
+        }
+
+    }
+}
+
+macro_input!(FunctionMacroHandler; input: Input; "a"; "function"; "one `TokenStream`");
+macro_input!(DeriveMacroHandler; item: Item; "a"; "derive"; "one `TokenStream`");
+macro_input!(AttributeMacroHandler; input: Input, item: Item; "an"; "attribute"; "two `TokenStream`s");
+
+#[rustfmt::skip]
+#[allow(clippy::doc_markdown)]
+/// Output of a macro handler.
+///
+/// Enables support for returning any [`TokenStream`](AnyTokenStream) or
+/// <code>[Result]<[TokenStream](AnyTokenStream), [impl ToTokensError](ToTokensError)></code>
+/// from a proc-macro implementation.
+pub trait MacroOutput {
+    /// Handles conversion into a <code>[Result]<[TokenStream](AnyTokenStream), [Error]></code>.
+    #[allow(clippy::missing_errors_doc)]
+    fn convert(self) -> Result<TokenStream, Error>;
+}
+
+impl<T: AnyTokenStream> MacroOutput for T {
+    fn convert(self) -> Result<TokenStream, Error> {
+        Ok(self.into())
+    }
+}
+
+impl<T: MacroOutput, E: ToTokensError + 'static> MacroOutput for Result<T, E> {
+    fn convert(self) -> Result<TokenStream, Error> {
+        self.map_err(Error::from).and_then(MacroOutput::convert)
+    }
 }

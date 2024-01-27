@@ -1,14 +1,23 @@
 #![allow(missing_docs, clippy::pedantic)]
+use std::convert::Infallible;
 use std::marker::PhantomData;
 
 use proc_macro2::TokenStream;
 
-use crate::{AnyTokenStream, Emitter, MacroHandler, ToTokensError};
+use crate::{
+    AnyTokenStream, AttributeMacroHandler, DeriveMacroHandler, Emitter, FunctionMacroHandler,
+    ToTokensError,
+};
 pub trait ManyhowParse<T> {
     fn manyhow_parse(&self, input: impl AnyTokenStream, attr: bool) -> Result<T, TokenStream>;
 }
 pub trait ManyhowToTokens<T> {
-    fn manyhow_into_token_stream(&self, input: T, tokens: TokenStream) -> TokenStream;
+    fn manyhow_to_tokens(&self, input: T, tokens: &mut TokenStream);
+}
+pub trait ManyhowTry<T> {
+    type Ok;
+    type Err;
+    fn manyhow_try(&self, value: T) -> Result<Self::Ok, Self::Err>;
 }
 
 pub struct WhatType<T>(PhantomData<T>);
@@ -43,10 +52,39 @@ impl<T: Into<TokenStream> + From<TokenStream>> ManyhowParse<T> for WhatType<T> {
     }
 }
 
-impl<T: Into<TokenStream> + From<TokenStream>> ManyhowToTokens<T> for WhatType<T> {
-    fn manyhow_into_token_stream(&self, input: T, mut tokens: TokenStream) -> TokenStream {
-        tokens.extend(input.into());
-        tokens
+impl ManyhowToTokens<TokenStream> for WhatType<TokenStream> {
+    fn manyhow_to_tokens(&self, input: TokenStream, tokens: &mut TokenStream) {
+        tokens.extend(input);
+    }
+}
+
+impl ManyhowToTokens<proc_macro::TokenStream> for WhatType<proc_macro::TokenStream> {
+    fn manyhow_to_tokens(&self, input: proc_macro::TokenStream, tokens: &mut TokenStream) {
+        tokens.extend(TokenStream::from(input));
+    }
+}
+
+impl<E: ToTokensError> ManyhowToTokens<E> for WhatType<E> {
+    fn manyhow_to_tokens(&self, input: E, tokens: &mut TokenStream) {
+        input.to_tokens(tokens);
+    }
+}
+
+impl<T, E> ManyhowTry<Result<T, E>> for WhatType<Result<T, E>> {
+    type Err = E;
+    type Ok = T;
+
+    fn manyhow_try(&self, value: Result<T, E>) -> Result<Self::Ok, Self::Err> {
+        value
+    }
+}
+
+impl<T> ManyhowTry<T> for &WhatType<T> {
+    type Err = Infallible;
+    type Ok = T;
+
+    fn manyhow_try(&self, value: T) -> Result<Self::Ok, Self::Err> {
+        Ok(value)
     }
 }
 
@@ -67,9 +105,8 @@ impl<T: syn2::parse::Parse> ManyhowParse<T> for &WhatType<T> {
 }
 #[cfg(feature = "syn2")]
 impl<T: quote::ToTokens> ManyhowToTokens<T> for &WhatType<T> {
-    fn manyhow_into_token_stream(&self, input: T, mut tokens: TokenStream) -> TokenStream {
-        input.to_tokens(&mut tokens);
-        tokens
+    fn manyhow_to_tokens(&self, input: T, tokens: &mut TokenStream) {
+        input.to_tokens(tokens);
     }
 }
 
@@ -101,12 +138,12 @@ fn test_inference() {
 }
 
 macro_rules! transparent_handlers {
-    ($name:ident; $($input:ident: $Input:ident $($context:expr)?),*; $($dummy:ident)?) => {
+    ($name:ident; $MacroInput:ident; $($input:ident: $Input:ident $($context:expr)?),*; $($dummy:ident)?) => {
         /// Internal implementation for macro.
-        pub fn $name<$($Input,)* Dummy: AnyTokenStream, Output, Error: ToTokensError, Function,>(
+        pub fn $name<$($Input,)* Dummy: AnyTokenStream, Output, Function,>(
             $($input: Result<$Input, TokenStream>,)*
             $($dummy: Option<impl AnyTokenStream>,)?
-            body: impl MacroHandler<($($Input,)*), Dummy, Output, Function, Error>,
+            body: impl $MacroInput<Function, $($Input = $Input,)* Dummy = Dummy, Output = Output>,
         ) -> Result<(Output, TokenStream), TokenStream> {
             // use $crate::ToTokensError as _;
             #[allow(unused)]
@@ -122,20 +159,14 @@ macro_rules! transparent_handlers {
             };)*
             let mut tokens = dummy.into();
             let mut emitter = Emitter::new();
-            let output = body.call(($($input,)*), &mut tokens, &mut emitter);
-            match output {
-                Ok(tokens) => Ok((tokens, emitter.into_result().err().map($crate::ToTokensError::into_token_stream).unwrap_or_default())),
-                Err(error) => {
-                    let mut tokens = tokens.into();
-                    error.to_tokens(&mut tokens);
-                    emitter.to_tokens(&mut tokens);
-                    Err(tokens)
-                }
-            }
+            let output = body.call($($input,)+ &mut tokens, &mut emitter);
+            let mut tokens = tokens.into();
+            emitter.to_tokens(&mut tokens);
+            Ok((output, tokens))
         }
     };
 }
 
-transparent_handlers! { function_transparent; input: Input; dummy }
-transparent_handlers! { derive_transparent; item: Item; }
-transparent_handlers! { attribute_transparent; input: Input, item: Item; dummy }
+transparent_handlers! { function_transparent; FunctionMacroHandler; input: Input; dummy }
+transparent_handlers! { derive_transparent; DeriveMacroHandler; item: Item;}
+transparent_handlers! { attribute_transparent; AttributeMacroHandler; input: Input, item: Item; dummy }

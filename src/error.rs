@@ -14,7 +14,7 @@ use syn1::Error as Syn1Error;
 use syn2::Error as Syn2Error;
 
 #[cfg(doc)]
-use crate::MacroHandler;
+use crate::MacroOutput;
 use crate::{to_tokens_span_range, SpanRanged};
 
 /// An alias for [`Result`](std::result::Result) suited for use with this crate
@@ -85,8 +85,8 @@ impl<I: ToTokensError + 'static> Extend<I> for Error {
 /// Can take additional attachments like [`help`](Self::help) or
 /// [`note`](Self::note).
 ///
-/// Implements `ToTokensError` and can therefore be returned from
-/// [`MacroHandler`]s.
+/// Implements `ToTokensError` and can therefore be used with
+/// [`MacroOutput`]s.
 #[derive(Debug)]
 #[must_use]
 pub struct ErrorMessage {
@@ -275,8 +275,8 @@ impl<I: ToTokensError + 'static> Extend<I> for Emitter {
     }
 }
 
-/// Error that can be converted to a [`TokenStream`] required to be returned by
-/// a [`MacroHandler`]
+/// Error that can be converted to a [`TokenStream`] required to be used with
+/// [`MacroOutput`]
 ///
 /// This trait is equivalent to [`ToTokens`].
 pub trait ToTokensError: Debug {

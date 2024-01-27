@@ -148,6 +148,15 @@ pub fn parse_quote_dummy_error(input: TokenStream) -> TokenStream {
     )
 }
 
+#[proc_macro]
+pub fn parse_quote_dummy_error_syn_result(input: TokenStream) -> TokenStream {
+    function!(
+        #[as_dummy]
+        input,
+        |_: TokenStream| -> syn::Result<syn::Ident> { bail!("error message") }
+    )
+}
+
 #[proc_macro_attribute]
 pub fn parse_quote_attribute(input: TokenStream, item: TokenStream) -> TokenStream {
     attribute!(input, item, |_: syn::LitStr, item: syn::DeriveInput| item)
@@ -173,7 +182,25 @@ pub fn parse_quote_dummy_error_attribute(input: TokenStream, item: TokenStream) 
     )
 }
 
+#[proc_macro_attribute]
+pub fn parse_quote_dummy_error_attribute_syn_result(input: TokenStream, item: TokenStream) -> TokenStream {
+    attribute!(
+        input,
+        #[as_dummy]
+        item,
+        |_: TokenStream, _: TokenStream| -> syn::Result<syn::Ident> { bail!("error message") }
+    )
+}
+
 #[proc_macro_derive(ParseQuote)]
 pub fn parse_quote_derive(item: TokenStream) -> TokenStream {
     derive!(item, |item: syn::ItemStruct| item)
+}
+
+#[proc_macro_derive(ParseQuoteSynResult)]
+pub fn parse_quote_derive_syn_result(item: TokenStream) -> TokenStream {
+    derive!(
+        item,
+        |item: syn::ItemStruct| -> syn::Result<syn::ItemStruct> { Ok(item) }
+    )
 }

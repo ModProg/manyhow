@@ -5,6 +5,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 <!-- ## [Unreleased] -->
+### Added
+- `{Function,Attribute,Derive}MacroHandler`,
+
+### Removed
+- **Breaking Change** `MacroHandler` was replaced by dedicated traits for each macro type, this probably doesn't affect any usages
+
+### Fixed
+- `syn::Result` could not be used as return type of macro handlers
+
 ## [0.10.4] - 2023-11-24
 ### Changed
 - Allow parsing of types that do not implement `ToTokens`
