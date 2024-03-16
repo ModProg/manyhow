@@ -36,7 +36,7 @@
 //! ```
 //!
 //! # Using the `#[manyhow]` macro
-//! To activate the error hadling, just add [`#[manyhow]`](manyhow) above any
+//! To activate the error handling, just add [`#[manyhow]`](manyhow) above any
 //! proc-macro implementation, reducing the above example to:
 //!
 //! ```
@@ -70,8 +70,8 @@
 //! See [Without macros](#without-macros) to see what this expands to under the
 //! hood.
 //!
-//! You can also use the `#[manyhow]` attrubutes on a use statement, useful when
-//! moving your proc-macro implementations in seperate modules.
+//! You can also use the `#[manyhow]` attributes on a use statement, useful when
+//! moving your proc-macro implementations in separate modules.
 //!
 //! ```
 //! # use quote::quote;
@@ -98,7 +98,7 @@
 //!
 //! A proc macro function marked as `#[manyhow]` can take and return any
 //! [`TokenStream`](AnyTokenStream), and can also return `Result<TokenStream,
-//! E>` where `E` implments [`ToTokensError`]. As additional parameters a
+//! E>` where `E` implements [`ToTokensError`]. As additional parameters a
 //! [dummy](#dummy-mut-tokenstream) and/or [emitter](#emitter-mut-emitter) can
 //! be specified.
 //!
@@ -226,7 +226,7 @@
 //!   macro.
 //! - `syn`/`syn2` **default** Enables errors for [`syn` 2.x](https://docs.rs/syn/latest/syn/).
 //! - `syn1` Enables errors for [`syn` 1.x](https://docs.rs/syn/1.0.109/syn/index.html).
-//! - `darling` Enables erros for [`darling`](https://docs.rs/darling/latest/index.html).
+//! - `darling` Enables errors for [`darling`](https://docs.rs/darling/latest/index.html).
 
 #[cfg(feature = "macros")]
 pub use macros::manyhow;
@@ -290,9 +290,13 @@ macro_rules! __macro_handler {
             )+ $($dummy,)? implementation)
             {
                 Err(tokens) => tokens.into(),
-                Ok((output, mut tokens)) => {
+                Ok((output, mut tokens, mut dummy)) => {
                     match (&$crate::__private::WhatType::from(&output)).manyhow_try(output) {
-                        Err(error) => (&$crate::__private::WhatType::from(&error)).manyhow_to_tokens(error, &mut tokens),
+                        Err(error) => {
+                            dummy.extend(tokens);
+                            tokens = dummy;
+                            (&$crate::__private::WhatType::from(&error)).manyhow_to_tokens(error, &mut tokens);
+                        },
                         Ok(output) => (&$crate::__private::WhatType::from(&output)).manyhow_to_tokens(output, &mut tokens),
                     };
                     tokens.into()
@@ -762,7 +766,7 @@ macro_rules! macro_input {
         ///
         /// Trait is implemented for any [`function`](FnOnce), taking in
         #[doc = concat!($token_streams, ".")]
-        /// Additionally they can take optionally in any order a [`&mut
+        /// Additionally, they can take optionally in any order a [`&mut
         /// Emitter`](Emitter) which allows emitting errors without returning early. And
         /// a `&mut TokenStream` to return a dummy `TokenStream` on failure.
         ///

@@ -144,7 +144,7 @@ macro_rules! transparent_handlers {
             $($input: Result<$Input, TokenStream>,)*
             $($dummy: Option<impl AnyTokenStream>,)?
             body: impl $MacroInput<Function, $($Input = $Input,)* Dummy = Dummy, Output = Output>,
-        ) -> Result<(Output, TokenStream), TokenStream> {
+        ) -> Result<(Output, TokenStream, TokenStream), TokenStream> {
             // use $crate::ToTokensError as _;
             #[allow(unused)]
             let mut dummy = TokenStream::new();
@@ -157,12 +157,12 @@ macro_rules! transparent_handlers {
                     return Err(dummy);
                 }
             };)*
-            let mut tokens = dummy.into();
+            let mut dummy = dummy.into();
             let mut emitter = Emitter::new();
-            let output = body.call($($input,)+ &mut tokens, &mut emitter);
-            let mut tokens = tokens.into();
+            let output = body.call($($input,)+ &mut dummy, &mut emitter);
+            let mut tokens = TokenStream::new();
             emitter.to_tokens(&mut tokens);
-            Ok((output, tokens))
+            Ok((output, tokens, dummy.into()))
         }
     };
 }

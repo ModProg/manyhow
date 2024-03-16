@@ -11,6 +11,12 @@ pub fn attr_item_as_dummy(_input: TokenStream, _item: TokenStream) -> SilentResu
     Err(SilentError)
 }
 
+#[manyhow(item_as_dummy)]
+#[proc_macro_attribute]
+pub fn attr_item_as_dummy_ok(_input: TokenStream, _item: TokenStream) -> TokenStream2 {
+    quote!()
+}
+
 #[manyhow()]
 #[proc_macro_attribute]
 pub fn attr_no_dummy(_input: TokenStream, _item: TokenStream) -> SilentResult {

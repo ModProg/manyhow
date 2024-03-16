@@ -6,6 +6,9 @@ fn attr() {
     struct ItemAsDummy;
     _ = ItemAsDummy;
 
+    #[attr_item_as_dummy_ok] // does not conflict with above
+    struct ItemAsDummy;
+
     #[attr_no_dummy]
     struct ItemAsDummy; // does not conflict with above
 
