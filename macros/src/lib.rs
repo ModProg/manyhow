@@ -1,4 +1,5 @@
-use std::{fmt::{Display, Write}, mem};
+use std::fmt::{Display, Write};
+use std::mem;
 
 use proc_macro2::{Group, Ident, Span, TokenStream, TokenTree};
 use proc_macro_utils::{Delimited, TokenStream2Ext, TokenStreamExt, TokenTree2Ext, TokenTreePunct};
@@ -82,7 +83,7 @@ impl Display for Param {
     }
 }
 
-/// Attribute macro to remove boiler plate from proc macro entry points.
+/// Attribute macro to remove boilerplate from proc macro entry points.
 ///
 /// See [the documentation at the crate root for more
 /// details](https://docs.rs/manyhow#using-the-manyhow-macro).
@@ -193,7 +194,7 @@ pub fn manyhow(
     let flags_replace = |i: usize, replacement: Option<&str>| {
         let mut flags = flags.iter().map(ToString::to_string).collect::<Vec<_>>();
         if let Some(replacement) = replacement {
-            flags[i] = replacement.to_owned();
+            replacement.clone_into(&mut flags[i]);
         } else {
             flags.remove(i);
         }
@@ -292,7 +293,7 @@ pub fn manyhow(
             .last()
             .expect("use statement should contain at least on item");
 
-        let Some(fn_name) = fn_name.ident() else {
+        let Some(mut fn_name) = fn_name.ident().cloned() else {
             return with_helpful_error(
                 item,
                 fn_name.span(),
@@ -301,6 +302,8 @@ pub fn manyhow(
                 "try splitting the use statment",
             );
         };
+
+        fn_name.set_span(Span::call_site());
 
         quote!(fn #fn_name).to_tokens(&mut output);
         impl_fn_path = path.into_iter().collect();
