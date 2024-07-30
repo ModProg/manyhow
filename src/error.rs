@@ -2,7 +2,7 @@
 use std::convert::Infallible;
 use std::fmt::{Debug, Display};
 use std::mem;
-use std::ops::Range;
+use std::ops::{Add, AddAssign, Range};
 
 #[cfg(feature = "darling")]
 use darling_core::Error as DarlingError;
@@ -58,6 +58,20 @@ impl From<SilentError> for Error {
     }
 }
 
+impl<T: ToTokensError + 'static> Add<T> for Error {
+    type Output = Error;
+
+    fn add(self, rhs: T) -> Self::Output {
+        self.join(rhs)
+    }
+}
+
+impl<T: ToTokensError + 'static> AddAssign<T> for Error {
+    fn add_assign(&mut self, rhs: T) {
+        self.push(rhs);
+    }
+}
+
 impl Error {
     /// Mimics [`From<impl ToTokensError> for Error`](From) implementation to
     /// not conflict std's `From<T> for T`
@@ -66,6 +80,17 @@ impl Error {
     }
 
     /// Pushes an additional `Error`
+    ///
+    /// Alternatively errors can also be "added":
+    ///
+    /// ```
+    /// use manyhow::{Error, error_message};
+    /// let mut error = Error::from(error_message!("Hello Rust!"));
+    /// error += error_message!("Hello 🦀!");
+    /// # use manyhow::ToTokensError;
+    /// # proc_macro_utils::assert_tokens!(error.into_token_stream(), 
+    /// #     { ::core::compile_error!{"Hello Rust!"} ::core::compile_error!{"Hello 🦀!"} });
+    /// ```
     pub fn push(&mut self, error: impl ToTokensError + 'static) {
         self.0.push(Box::new(error));
     }
@@ -136,6 +161,14 @@ impl From<ErrorMessage> for Syn1Error {
 impl From<ErrorMessage> for Syn2Error {
     fn from(value: ErrorMessage) -> Self {
         Self::new_spanned(value.to_token_stream(), value)
+    }
+}
+
+impl<T: ToTokensError + 'static> Add<T> for ErrorMessage {
+    type Output = Error;
+
+    fn add(self, rhs: T) -> Self::Output {
+        self.join(rhs)
     }
 }
 
@@ -222,6 +255,12 @@ impl Attachment for ErrorMessage {
 #[derive(Default, Debug)]
 pub struct Emitter(Vec<Box<dyn ToTokensError>>);
 
+impl<T: ToTokensError + 'static> AddAssign<T> for Emitter {
+    fn add_assign(&mut self, rhs: T) {
+        self.emit(rhs);
+    }
+}
+
 impl Emitter {
     /// Creates an `Emitter`, this can be used to collect errors than can later
     /// be converted with [`Emitter::into_result()`].
@@ -236,7 +275,16 @@ impl Emitter {
         }
     }
 
-    /// Emitts an error
+    /// Emits an error
+    ///
+    /// Alternatively errors can also be "added":
+    ///
+    /// ```
+    /// let mut emitter = manyhow::Emitter::new();
+    /// emitter += manyhow::error_message!("Hello World!");
+    /// # use manyhow::ToTokensError;
+    /// # proc_macro_utils::assert_tokens!(emitter.into_result().unwrap_err().into_token_stream(), { ::core::compile_error!{"Hello World!"} });
+    /// ```
     pub fn emit(&mut self, error: impl ToTokensError + 'static) {
         self.0.push(Box::new(error));
     }
@@ -306,6 +354,20 @@ pub trait JoinToTokensError {
     /// # use crate::manyhow::JoinToTokensError;
     ///
     /// error_message!("test").join(error_message!("another"));
+    /// ```
+    ///
+    /// Some errors like [`manyhow::Error`] and [`manyhow::ErrorMessage`] can
+    /// also be "added":
+    ///
+    /// ```
+    /// # use manyhow::ToTokensError;
+    /// use manyhow::{error_message, Error};
+    /// # proc_macro_utils::assert_tokens!((
+    /// error_message!("Hello Rust!") + error_message!("Hello 🦀!")
+    /// # ).into_token_stream(), { ::core::compile_error!{"Hello Rust!"} ::core::compile_error!{"Hello 🦀!"} });
+    /// # proc_macro_utils::assert_tokens!((
+    /// Error::from(error_message!("Hello Rust!")) + error_message!("Hello 🦀!")
+    /// # ).into_token_stream(), { ::core::compile_error!{"Hello Rust!"} ::core::compile_error!{"Hello 🦀!"} });
     /// ```
     fn join(self, error: impl ToTokensError + 'static) -> Error;
 }
