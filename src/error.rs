@@ -84,11 +84,11 @@ impl Error {
     /// Alternatively errors can also be "added":
     ///
     /// ```
-    /// use manyhow::{Error, error_message};
+    /// use manyhow::{error_message, Error};
     /// let mut error = Error::from(error_message!("Hello Rust!"));
     /// error += error_message!("Hello 🦀!");
     /// # use manyhow::ToTokensError;
-    /// # proc_macro_utils::assert_tokens!(error.into_token_stream(), 
+    /// # proc_macro_utils::assert_tokens!(error.into_token_stream(),
     /// #     { ::core::compile_error!{"Hello Rust!"} ::core::compile_error!{"Hello 🦀!"} });
     /// ```
     pub fn push(&mut self, error: impl ToTokensError + 'static) {

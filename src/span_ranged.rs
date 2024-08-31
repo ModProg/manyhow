@@ -128,6 +128,31 @@ impl SpanRanged for proc_macro::TokenStream {
     }
 }
 
+impl SpanRanged for proc_macro2::extra::DelimSpan {
+    fn span_range(&self) -> Range<Span> {
+        self.join().span_range()
+    }
+}
+
+#[cfg(feature = "syn2")]
+const _: () = {
+    impl SpanRanged for syn2::token::Brace {
+        fn span_range(&self) -> Range<Span> {
+            self.span.span_range()
+        }
+    }
+    impl SpanRanged for syn2::token::Bracket {
+        fn span_range(&self) -> Range<Span> {
+            self.span.span_range()
+        }
+    }
+    impl SpanRanged for syn2::token::Paren {
+        fn span_range(&self) -> Range<Span> {
+            self.span.span_range()
+        }
+    }
+};
+
 /// Implementation of [`SpanRanged`](SpanRanged)` for T: `[`ToTokens`]
 ///
 /// This is necessary to put in a standalone function due to compiler
