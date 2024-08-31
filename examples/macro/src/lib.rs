@@ -190,7 +190,10 @@ pub fn parse_quote_dummy_error_attribute(_: TokenStream, _: TokenStream) -> Resu
 
 #[manyhow(item_as_dummy)]
 #[proc_macro_attribute]
-pub fn parse_quote_dummy_error_attribute_syn_result(_: TokenStream, _: TokenStream) -> syn::Result<syn::Ident> {
+pub fn parse_quote_dummy_error_attribute_syn_result(
+    _: TokenStream,
+    _: TokenStream,
+) -> syn::Result<syn::Ident> {
     bail!("error message")
 }
 

@@ -183,7 +183,10 @@ pub fn parse_quote_dummy_error_attribute(input: TokenStream, item: TokenStream) 
 }
 
 #[proc_macro_attribute]
-pub fn parse_quote_dummy_error_attribute_syn_result(input: TokenStream, item: TokenStream) -> TokenStream {
+pub fn parse_quote_dummy_error_attribute_syn_result(
+    input: TokenStream,
+    item: TokenStream,
+) -> TokenStream {
     attribute!(
         input,
         #[as_dummy]
