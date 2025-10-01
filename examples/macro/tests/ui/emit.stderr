@@ -7,10 +7,10 @@ error: example error
   = note: this error originates in the attribute macro `attr_emit` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: example error
-  --> tests/ui/emit.rs:8:5
-   |
-8  | /     emit!(
-9  | |         struct Struct;
+ --> tests/ui/emit.rs:8:5
+  |
+ 8 | /     emit!(
+ 9 | |         struct Struct;
 10 | |     );
    | |_____^
    |
