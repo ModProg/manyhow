@@ -14,7 +14,7 @@ quote = "1"
 syn = { version = "2", features = ["full"] }
 
 [dev-dependencies]
-trybuild = "1.0.80"
+trybuild = "1.0.111"
 
 [package.metadata.release]
 release = false
