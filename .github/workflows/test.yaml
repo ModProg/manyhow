@@ -1,8 +1,8 @@
 name: Test
 
 on:
-  push: null
-  pull_request: null
+  push:
+  pull_request:
   schedule: 
     - cron: '0 12 * * *'
 
