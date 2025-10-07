@@ -9,8 +9,8 @@ error: example error
 error: example error
   --> tests/ui/emit.rs:8:5
    |
-8  | /     emit!(
-9  | |         struct Struct;
+ 8 | /     emit!(
+ 9 | |         struct Struct;
 10 | |     );
    | |_____^
    |
