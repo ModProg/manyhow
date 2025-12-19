@@ -1,4 +1,4 @@
-#![cfg_attr(docsrs, feature(doc_auto_cfg))]
+#![cfg_attr(docsrs, feature(doc_cfg))]
 #![warn(clippy::pedantic, missing_docs)]
 #![allow(clippy::module_name_repetitions)]
 //! Proc **m**acro **anyhow**, a combination of ideas from
