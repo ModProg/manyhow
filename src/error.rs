@@ -7,7 +7,7 @@ use std::ops::{Add, AddAssign, Range};
 #[cfg(feature = "darling")]
 use darling_core::Error as DarlingError;
 use proc_macro2::{Span, TokenStream};
-use quote::{quote_spanned, ToTokens};
+use quote::{ToTokens, quote_spanned};
 #[cfg(feature = "syn1")]
 use syn1::Error as Syn1Error;
 #[cfg(feature = "syn2")]
@@ -15,7 +15,7 @@ use syn2::Error as Syn2Error;
 
 #[cfg(doc)]
 use crate::MacroOutput;
-use crate::{to_tokens_span_range, SpanRanged};
+use crate::{SpanRanged, to_tokens_span_range};
 
 /// An alias for [`Result`](std::result::Result) suited for use with this crate
 pub type Result<T = TokenStream, E = Error> = std::result::Result<T, E>;
@@ -84,7 +84,7 @@ impl Error {
     /// Alternatively errors can also be "added":
     ///
     /// ```
-    /// use manyhow::{error_message, Error};
+    /// use manyhow::{Error, error_message};
     /// let mut error = Error::from(error_message!("Hello Rust!"));
     /// error += error_message!("Hello 🦀!");
     /// # use manyhow::ToTokensError;
@@ -356,8 +356,8 @@ pub trait JoinToTokensError {
     /// error_message!("test").join(error_message!("another"));
     /// ```
     ///
-    /// Some errors like [`manyhow::Error`] and [`manyhow::ErrorMessage`] can
-    /// also be "added":
+    /// Some errors like [`manyhow::Error`](crate::Error) and
+    /// [`manyhow::ErrorMessage`](crate::ErrorMessage) can also be "added":
     ///
     /// ```
     /// # use manyhow::ToTokensError;
