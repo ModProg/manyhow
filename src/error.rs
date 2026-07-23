@@ -12,6 +12,8 @@ use quote::{ToTokens, quote_spanned};
 use syn1::Error as Syn1Error;
 #[cfg(feature = "syn2")]
 use syn2::Error as Syn2Error;
+#[cfg(feature = "syn3")]
+use syn3::Error as Syn3Error;
 
 #[cfg(doc)]
 use crate::MacroOutput;
@@ -38,6 +40,12 @@ impl From<Syn1Error> for Error {
 #[cfg(feature = "syn2")]
 impl From<Syn2Error> for Error {
     fn from(error: Syn2Error) -> Self {
+        Self::from(error)
+    }
+}
+#[cfg(feature = "syn3")]
+impl From<Syn3Error> for Error {
+    fn from(error: Syn3Error) -> Self {
         Self::from(error)
     }
 }
@@ -159,6 +167,12 @@ impl From<ErrorMessage> for Syn1Error {
 }
 #[cfg(feature = "syn2")]
 impl From<ErrorMessage> for Syn2Error {
+    fn from(value: ErrorMessage) -> Self {
+        Self::new_spanned(value.to_token_stream(), value)
+    }
+}
+#[cfg(feature = "syn3")]
+impl From<ErrorMessage> for Syn3Error {
     fn from(value: ErrorMessage) -> Self {
         Self::new_spanned(value.to_token_stream(), value)
     }
@@ -391,8 +405,14 @@ impl ToTokensError for Syn1Error {
         self.to_compile_error().to_tokens(tokens);
     }
 }
-#[cfg(feature = "syn")]
+#[cfg(feature = "syn2")]
 impl ToTokensError for Syn2Error {
+    fn to_tokens(&self, tokens: &mut TokenStream) {
+        self.to_compile_error().to_tokens(tokens);
+    }
+}
+#[cfg(feature = "syn3")]
+impl ToTokensError for Syn3Error {
     fn to_tokens(&self, tokens: &mut TokenStream) {
         self.to_compile_error().to_tokens(tokens);
     }

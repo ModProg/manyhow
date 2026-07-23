@@ -137,6 +137,55 @@ fn test_inference() {
     }
 }
 
+#[cfg(feature = "syn3")]
+impl<T: syn3::parse::Parse> ManyhowParse<T> for &WhatType<T> {
+    fn manyhow_parse(&self, input: impl AnyTokenStream, attr: bool) -> Result<T, TokenStream> {
+        let input = input.into();
+        let empty = input.is_empty();
+        syn3::parse2(input).map_err(|e| {
+            let mut e = e.into_compile_error();
+            if attr && empty {
+                error_message!("while parsing attribute argument (`#[... (...)]`)")
+                    .to_tokens(&mut e)
+            }
+            e
+        })
+    }
+}
+#[cfg(feature = "syn3")]
+impl<T: quote::ToTokens> ManyhowToTokens<T> for &WhatType<T> {
+    fn manyhow_to_tokens(&self, input: T, tokens: &mut TokenStream) {
+        input.to_tokens(tokens);
+    }
+}
+
+#[cfg(feature = "syn3")]
+#[test]
+#[allow(unused)]
+fn test_inference() {
+    use syn3::parse::Parse;
+
+    if false {
+        let wt = &WhatType::new();
+        let ts: proc_macro::TokenStream = wt.manyhow_parse(quote::quote!(test), false).unwrap();
+        let wt = &WhatType::new();
+        if false {
+            let wt: Result<syn3::Ident, _> = wt.identify();
+        }
+        let ts: syn3::Ident = wt.manyhow_parse(quote::quote!(test), false).unwrap();
+
+        struct Parsable;
+        impl Parse for Parsable {
+            fn parse(input: syn3::parse::ParseStream) -> syn3::Result<Self> {
+                todo!()
+            }
+        }
+        let wt = &WhatType::new();
+        let _: Result<Parsable, _> = wt.identify();
+        let ts = wt.manyhow_parse(quote::quote!(test), false).unwrap();
+    }
+}
+
 macro_rules! transparent_handlers {
     ($name:ident; $MacroInput:ident; $($input:ident: $Input:ident $($context:expr)?),*; $($dummy:ident)?) => {
         /// Internal implementation for macro.
