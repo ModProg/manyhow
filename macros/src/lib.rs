@@ -1,9 +1,9 @@
 use std::fmt::{Display, Write};
 use std::mem;
 
-use proc_macro2::{Group, Ident, Span, TokenStream, TokenTree};
 use proc_macro_utils::{Delimited, TokenStream2Ext, TokenStreamExt, TokenTree2Ext, TokenTreePunct};
-use quote::{format_ident, quote, quote_spanned, ToTokens};
+use proc_macro2::{Group, Ident, Span, TokenStream, TokenTree};
+use quote::{ToTokens, format_ident, quote, quote_spanned};
 
 #[derive(PartialEq, Eq, Clone, Copy)]
 enum ProcMacroType {

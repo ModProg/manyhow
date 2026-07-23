@@ -196,7 +196,7 @@
 //! ```
 //! # use quote::quote;
 //! # use syn3 as syn;
-//! use manyhow::{manyhow, Emitter, ErrorMessage};
+//! use manyhow::{Emitter, ErrorMessage, manyhow};
 //! use proc_macro2::TokenStream as TokenStream2;
 //!
 //! # let _ = quote!{
@@ -239,7 +239,7 @@ extern crate proc_macro;
 
 #[macro_use]
 mod span_ranged;
-pub use span_ranged::{to_tokens_span_range, SpanRanged};
+pub use span_ranged::{SpanRanged, to_tokens_span_range};
 #[macro_use]
 mod macro_rules;
 mod error;
@@ -319,7 +319,7 @@ macro_rules! __macro_handler {
 /// ```
 /// # use proc_macro_utils::assert_tokens;
 /// # use quote::{quote, ToTokens};
-/// use manyhow::{attribute, Emitter, Result};
+/// use manyhow::{Emitter, Result, attribute};
 /// use proc_macro2::TokenStream;
 /// # let input = quote!();
 /// # let item = quote!();
@@ -343,9 +343,9 @@ macro_rules! __macro_handler {
 /// initialized with `item`. To override assign a new `TokenStream`:
 /// ```
 /// # use proc_macro_utils::assert_tokens;
-/// use manyhow::{attribute, Result, SilentError};
+/// use manyhow::{Result, SilentError, attribute};
 /// use proc_macro2::TokenStream;
-/// use quote::{quote, ToTokens};
+/// use quote::{ToTokens, quote};
 /// # let input = quote!(input);
 /// let item = quote!(
 ///     struct Struct;
@@ -430,7 +430,7 @@ pub fn attribute<
 /// ```
 /// # use proc_macro_utils::assert_tokens;
 /// # use quote::{quote, ToTokens};
-/// use manyhow::{attribute, Emitter, Result};
+/// use manyhow::{Emitter, Result, attribute};
 /// use proc_macro2::TokenStream;
 /// # let input = quote!();
 /// # let item = quote!();
@@ -450,9 +450,9 @@ pub fn attribute<
 /// ```
 /// # use proc_macro_utils::assert_tokens;
 /// # use syn3 as syn;
-/// use manyhow::{attribute, Result, SilentError};
+/// use manyhow::{Result, SilentError, attribute};
 /// use proc_macro2::TokenStream;
-/// use quote::{quote, ToTokens};
+/// use quote::{ToTokens, quote};
 /// # let input = quote!(input);
 /// let item = quote!(
 ///     struct Struct;
@@ -501,7 +501,7 @@ macro_rules! attribute {
 /// ```
 /// # use proc_macro_utils::assert_tokens;
 /// # use quote::{quote, ToTokens};
-/// use manyhow::{derive, Emitter, Result};
+/// use manyhow::{Emitter, Result, derive};
 /// use proc_macro2::TokenStream;
 /// # let item = quote!();
 /// # let output: TokenStream =
@@ -551,7 +551,7 @@ pub fn derive<
 /// # use proc_macro_utils::assert_tokens;
 /// # use quote::{quote, ToTokens};
 /// # use syn3 as syn;
-/// use manyhow::{derive, Emitter, Result};
+/// use manyhow::{Emitter, Result, derive};
 /// use proc_macro2::TokenStream;
 /// # let item = quote!();
 /// # let output: TokenStream =
@@ -584,7 +584,7 @@ macro_rules! derive {
 /// ```
 /// # use proc_macro_utils::assert_tokens;
 /// # use quote::{quote, ToTokens};
-/// use manyhow::{function, Emitter, Result};
+/// use manyhow::{Emitter, Result, function};
 /// use proc_macro2::TokenStream;
 /// # let input = quote!();
 /// # let output: TokenStream =
@@ -669,7 +669,7 @@ pub fn function<
 /// # use proc_macro_utils::assert_tokens;
 /// # use quote::{quote, ToTokens};
 /// # use syn3 as syn;
-/// use manyhow::{function, Emitter, Result};
+/// use manyhow::{Emitter, Result, function};
 /// use proc_macro2::TokenStream;
 /// # let input = quote!();
 /// # let output: TokenStream =
