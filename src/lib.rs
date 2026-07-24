@@ -63,7 +63,7 @@
 //! // The output can also be anything that implements `quote::ToTokens`
 //! fn my_derive_macro(input: syn::DeriveInput) -> manyhow::Result<syn::ItemImpl> {
 //!     // ..
-//! #   manyhow::bail!("hello")
+//! #   manyhow::bail!{"hello"}
 //! }
 //! ```
 //!
@@ -174,7 +174,7 @@
 //!         input,
 //!         |input: syn::DeriveInput| -> manyhow::Result<syn::ItemImpl> {
 //!             // ..
-//! #           manyhow::bail!("error")
+//! #           manyhow::bail!{"error"}
 //!         },
 //!     )
 //! }
@@ -677,7 +677,7 @@ pub fn function<
 ///                   emitter: &mut Emitter|
 ///  -> Result<syn::ItemImpl> {
 ///     // ..
-///         # manyhow::bail!("unimplemented")
+///         # manyhow::bail!{"unimplemented"}
 /// });
 /// ```
 ///
