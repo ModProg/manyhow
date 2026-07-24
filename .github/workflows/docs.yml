@@ -36,7 +36,7 @@ jobs:
           rust-version: nightly
       - name: Generate Docs (reference docs.rs)
         run:  |
-          cargo rustdoc -- --cfg docsrs -Z unstable-options $(cargo metadata --format-version 1 | jq --raw-output '.packages | map("--extern-html-root-url=\(.name)=https://docs.rs/\(.name)/\(.version)") | join(" ")')
+          cargo rustdoc --all-features -- --cfg docsrs -Z unstable-options $(cargo metadata --format-version 1 | jq --raw-output '.packages | map("--extern-html-root-url=\(.name)=https://docs.rs/\(.name)/\(.version)") | join(" ")')
       - uses: actions/upload-pages-artifact@v5
         with:
           path: 'target/doc'

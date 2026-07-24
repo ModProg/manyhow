@@ -153,6 +153,25 @@ const _: () = {
     }
 };
 
+#[cfg(feature = "syn3")]
+const _: () = {
+    impl SpanRanged for syn3::token::Brace {
+        fn span_range(&self) -> Range<Span> {
+            self.span.span_range()
+        }
+    }
+    impl SpanRanged for syn3::token::Bracket {
+        fn span_range(&self) -> Range<Span> {
+            self.span.span_range()
+        }
+    }
+    impl SpanRanged for syn3::token::Paren {
+        fn span_range(&self) -> Range<Span> {
+            self.span.span_range()
+        }
+    }
+};
+
 /// Implementation of [`SpanRanged`](SpanRanged)` for T: `[`ToTokens`]
 ///
 /// This is necessary to put in a standalone function due to compiler

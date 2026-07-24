@@ -116,7 +116,7 @@ macro_rules! error_message {
 /// ```should_panic
 /// # use manyhow::bail;
 /// # use proc_macro2::Span;
-/// # use syn2 as syn;
+/// # use syn3 as syn;
 /// bail!("an error message"; error = "with attachments");
 /// let span = Span::call_site();
 /// bail!(span, "error message");
@@ -156,7 +156,7 @@ macro_rules! bail {
 /// ```should_panic
 /// # use manyhow::ensure;
 /// # use proc_macro2::Span;
-/// # use syn2 as syn;
+/// # use syn3 as syn;
 /// let span = Span::call_site();
 /// ensure!(false, span, "error message");
 /// let error = syn::Error::new(Span::call_site(), "an error");
@@ -184,7 +184,7 @@ macro_rules! ensure {
 /// ```
 /// # use manyhow::{emit, Emitter};
 /// # use proc_macro2::Span;
-/// # use syn2 as syn;
+/// # use syn3 as syn;
 /// let mut emitter = Emitter::new();
 /// emit!(emitter, "an error message");
 /// emit!(emitter, "an error message"; error = "with attachments");
@@ -198,7 +198,7 @@ macro_rules! ensure {
 /// ```
 /// # use manyhow::{emit, error_message, Error};
 /// # use proc_macro2::Span;
-/// # use syn2 as syn;
+/// # use syn3 as syn;
 /// let mut error: Error = error_message!("initial error").into();
 /// emit!(error, "an error message");
 /// ```
@@ -207,7 +207,7 @@ macro_rules! ensure {
 /// ```
 /// # use manyhow::emit;
 /// # use proc_macro2::Span;
-/// # use syn2 as syn;
+/// # use syn3 as syn;
 /// let mut errors = Vec::new();
 /// emit!(errors, "an error message");
 /// ```
@@ -303,6 +303,11 @@ mod test {
         #[cfg(feature = "syn2")]
         {
             let error = syn2::Error::new(proc_macro2::Span::call_site(), "an error");
+            emit!(emitter, error);
+        }
+        #[cfg(feature = "syn3")]
+        {
+            let error = syn3::Error::new(proc_macro2::Span::call_site(), "an error");
             emit!(emitter, error);
         }
     }

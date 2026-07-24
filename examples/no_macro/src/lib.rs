@@ -1,4 +1,4 @@
-use manyhow::{attribute, bail, derive, function, Emitter, ErrorMessage, Result, SilentError};
+use manyhow::{Emitter, ErrorMessage, Result, SilentError, attribute, bail, derive, function};
 use proc_macro::TokenStream;
 use proc_macro2::{Span, TokenStream as TokenStream2};
 use quote::quote;
