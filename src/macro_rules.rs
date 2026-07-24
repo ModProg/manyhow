@@ -126,15 +126,15 @@ macro_rules! error_message {
 /// ```
 #[macro_export]
 macro_rules! bail {
-    ($msg:literal) => {
+    ($msg:literal) => {{
         return ::core::result::Result::Err($crate::error_message!($msg).into());
-    };
-    ($error:expr) => {
+    }};
+    ($error:expr) => {{
         return ::core::result::Result::Err($error.into());
-    };
-    ($($tt:tt)*) => {
+    }};
+    ($($tt:tt)*) => {{
         return ::core::result::Result::Err($crate::error_message!($($tt)*).into());
-    };
+    }};
 }
 
 /// Return early with an error, if a condition is not satisfied, matching
