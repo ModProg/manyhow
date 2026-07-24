@@ -11,7 +11,7 @@ proc-macro = true
 manyhow = { path = "../..", default-features = false, features = ["syn"] }
 proc-macro2 = "1"
 quote = "1"
-syn = { version = "2", features = ["full"] }
+syn = { version = "3", features = ["full"] }
 
 [dev-dependencies]
 trybuild = "1.0.111"
