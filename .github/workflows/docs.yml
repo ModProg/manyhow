@@ -22,8 +22,8 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
-      - uses: actions/cache@v3
+      - uses: actions/checkout@v7
+      - uses: actions/cache@v5
         with:
           path: |
             ~/.cargo/
@@ -31,14 +31,14 @@ jobs:
           key: docs-${{ hashFiles('Cargo.toml') }}
           restore-keys: |
             docs-
-      - uses: hecrj/setup-rust-action@v1
+      - uses: hecrj/setup-rust-action@v2
         with:
           rust-version: nightly
       - name: Generate Docs (reference docs.rs)
         run:  |
           cargo rustdoc -- --cfg docsrs -Z unstable-options $(cargo metadata --format-version 1 | jq --raw-output '.packages | map("--extern-html-root-url=\(.name)=https://docs.rs/\(.name)/\(.version)") | join(" ")')
-      - uses: actions/upload-pages-artifact@v4
+      - uses: actions/upload-pages-artifact@v5
         with:
           path: 'target/doc'
       - id: deployment
-        uses: actions/deploy-pages@v1
+        uses: actions/deploy-pages@v4
