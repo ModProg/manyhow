@@ -38,10 +38,10 @@ jobs:
         with:
           crate: cargo-hack
       - name: Build
-        run: cargo hack build --feature-powerset ${{ matrix.cargo_flags }}
+        run: cargo hack build --feature-powerset --mutually-exclusive-features=syn2,syn3 ${{ matrix.cargo_flags }}
       - name: Test
-        run: cargo hack test --feature-powerset --mutually-exclusive-features syn2,syn3 --all-targets --no-fail-fast --workspace
+        run: cargo hack test --feature-powerset --mutually-exclusive-features=syn2,syn3 --all-targets --no-fail-fast --workspace
       - name: Doc Test
-        run: cargo test --all-features --doc --no-fail-fast --workspace
+        run: cargo test --features=darling --doc --no-fail-fast --workspace
       - name: Build Docs
         run: cargo doc --all-features --workspace 
