@@ -34,13 +34,13 @@ jobs:
       - uses: hecrj/setup-rust-action@v1
         with:
           rust-version: ${{ matrix.rust }}
-      - uses: bruxisma/setup-cargo-hack@v1
+      - uses: baptiste0928/cargo-install@v3
         with:
-          cargo-hack-version: "0.5"
+          crate: cargo-hack
       - name: Build
         run: cargo hack build --feature-powerset ${{ matrix.cargo_flags }}
       - name: Test
-        run: cargo hack test --feature-powerset --all-targets --no-fail-fast --workspace --mutually-exclusive-features syn2,syn3
+        run: cargo hack test --feature-powerset --mutually-exclusive-features syn2,syn3 --all-targets --no-fail-fast --workspace
       - name: Doc Test
         run: cargo test --all-features --doc --no-fail-fast --workspace
       - name: Build Docs
