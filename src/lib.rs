@@ -225,7 +225,7 @@
 //! - `macros` **default** Enables [`#[manyhow]`](macros::manyhow) attribute
 //!   macro.
 //! - `syn`/`syn3` **default** Enables errors for [`syn` 3.x](https://docs.rs/syn/latest/syn/).
-//! - `syn2` **default** Enables errors for [`syn` 2.x](https://docs.rs/syn/2.0.119/syn/).
+//! - `syn2` Enables errors for [`syn` 2.x](https://docs.rs/syn/2.0.119/syn/).
 //! - `syn1` Enables errors for [`syn` 1.x](https://docs.rs/syn/1.0.109/syn/index.html).
 //! - `darling` Enables errors for [`darling`](https://docs.rs/darling/latest/index.html).
 
