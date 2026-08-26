@@ -125,9 +125,9 @@ fn test_inference() {
         let ts: proc_macro::TokenStream = wt.manyhow_parse(quote::quote!(test), false).unwrap();
         let wt = &WhatType::new();
         if false {
-            let wt: Result<syn2::Ident, _> = wt.identify();
+            let wt: Result<syn2::LitInt, _> = wt.identify();
         }
-        let ts: syn2::Ident = wt.manyhow_parse(quote::quote!(test), false).unwrap();
+        let ts: syn2::LitInt = wt.manyhow_parse(quote::quote!(test), false).unwrap();
 
         struct Parsable;
         impl Parse for Parsable {
@@ -168,9 +168,9 @@ fn test_inference() {
         let ts: proc_macro::TokenStream = wt.manyhow_parse(quote::quote!(test), false).unwrap();
         let wt = &WhatType::new();
         if false {
-            let wt: Result<syn3::Ident, _> = wt.identify();
+            let wt: Result<syn3::LitInt, _> = wt.identify();
         }
-        let ts: syn3::Ident = wt.manyhow_parse(quote::quote!(test), false).unwrap();
+        let ts: syn3::LitInt = wt.manyhow_parse(quote::quote!(test), false).unwrap();
 
         struct Parsable;
         impl Parse for Parsable {
