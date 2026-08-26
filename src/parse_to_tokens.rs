@@ -8,12 +8,15 @@ use crate::{
     AnyTokenStream, AttributeMacroHandler, DeriveMacroHandler, Emitter, FunctionMacroHandler,
     ToTokensError,
 };
+
 pub trait ManyhowParse<T> {
     fn manyhow_parse(&self, input: impl AnyTokenStream, attr: bool) -> Result<T, TokenStream>;
 }
+
 pub trait ManyhowToTokens<T> {
     fn manyhow_to_tokens(&self, input: T, tokens: &mut TokenStream);
 }
+
 pub trait ManyhowTry<T> {
     type Ok;
     type Err;
@@ -70,6 +73,13 @@ impl<E: ToTokensError> ManyhowToTokens<E> for WhatType<E> {
     }
 }
 
+#[cfg(any(feature = "syn2", feature = "syn3"))]
+impl<T: quote::ToTokens> ManyhowToTokens<T> for &WhatType<T> {
+    fn manyhow_to_tokens(&self, input: T, tokens: &mut TokenStream) {
+        input.to_tokens(tokens);
+    }
+}
+
 impl<T, E> ManyhowTry<Result<T, E>> for WhatType<Result<T, E>> {
     type Err = E;
     type Ok = T;
@@ -101,12 +111,6 @@ impl<T: syn2::parse::Parse> ManyhowParse<T> for &WhatType<T> {
             }
             e
         })
-    }
-}
-#[cfg(all(feature = "syn2", not(doc)))]
-impl<T: quote::ToTokens> ManyhowToTokens<T> for &WhatType<T> {
-    fn manyhow_to_tokens(&self, input: T, tokens: &mut TokenStream) {
-        input.to_tokens(tokens);
     }
 }
 
@@ -150,12 +154,6 @@ impl<T: syn3::parse::Parse> ManyhowParse<T> for &WhatType<T> {
             }
             e
         })
-    }
-}
-#[cfg(feature = "syn3")]
-impl<T: quote::ToTokens> ManyhowToTokens<T> for &WhatType<T> {
-    fn manyhow_to_tokens(&self, input: T, tokens: &mut TokenStream) {
-        input.to_tokens(tokens);
     }
 }
 
