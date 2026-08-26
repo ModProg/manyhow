@@ -13,6 +13,14 @@ pub trait ManyhowParse<T> {
     fn manyhow_parse(&self, input: impl AnyTokenStream, attr: bool) -> Result<T, TokenStream>;
 }
 
+pub trait ManyhowParseSyn2<T> {
+    fn manyhow_parse(&self, input: impl AnyTokenStream, attr: bool) -> Result<T, TokenStream>;
+}
+
+pub trait ManyhowParseSyn3<T> {
+    fn manyhow_parse(&self, input: impl AnyTokenStream, attr: bool) -> Result<T, TokenStream>;
+}
+
 pub trait ManyhowToTokens<T> {
     fn manyhow_to_tokens(&self, input: T, tokens: &mut TokenStream);
 }
@@ -99,7 +107,7 @@ impl<T> ManyhowTry<T> for &WhatType<T> {
 }
 
 #[cfg(all(feature = "syn2", not(doc)))]
-impl<T: syn2::parse::Parse> ManyhowParse<T> for &WhatType<T> {
+impl<T: syn2::parse::Parse> ManyhowParseSyn2<T> for &WhatType<T> {
     fn manyhow_parse(&self, input: impl AnyTokenStream, attr: bool) -> Result<T, TokenStream> {
         let input = input.into();
         let empty = input.is_empty();
@@ -117,7 +125,7 @@ impl<T: syn2::parse::Parse> ManyhowParse<T> for &WhatType<T> {
 #[cfg(all(feature = "syn2", not(doc)))]
 #[test]
 #[allow(unused)]
-fn test_inference() {
+fn syn2_test_inference() {
     use syn2::parse::Parse;
 
     if false {
@@ -142,7 +150,7 @@ fn test_inference() {
 }
 
 #[cfg(feature = "syn3")]
-impl<T: syn3::parse::Parse> ManyhowParse<T> for &WhatType<T> {
+impl<T: syn3::parse::Parse> ManyhowParseSyn3<T> for &WhatType<T> {
     fn manyhow_parse(&self, input: impl AnyTokenStream, attr: bool) -> Result<T, TokenStream> {
         let input = input.into();
         let empty = input.is_empty();
@@ -160,7 +168,7 @@ impl<T: syn3::parse::Parse> ManyhowParse<T> for &WhatType<T> {
 #[cfg(feature = "syn3")]
 #[test]
 #[allow(unused)]
-fn test_inference() {
+fn syn3_test_inference() {
     use syn3::parse::Parse;
 
     if false {

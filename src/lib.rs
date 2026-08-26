@@ -276,7 +276,8 @@ macro_rules! __macro_handler {
         $crate::__macro_handler! {! $name; $($(#attr=$attr)? $n: $input),+; $impl; $crate::__private::Dummy::None}
     };
     (! $name:ident; $($(#attr=$attr:tt)? $n:ident: $input:expr),+; $impl:expr $(; $dummy:expr)?) => {{
-        use $crate::__private::{ManyhowParse, ManyhowToTokens, ManyhowTry};
+        #[allow(unused_imports)]
+        use $crate::__private::{ManyhowParse, ManyhowParseSyn2, ManyhowParseSyn3, ManyhowToTokens, ManyhowTry};
         let implementation = $impl;
         $(let $n = &$crate::__private::WhatType::new();)+
         if false {
