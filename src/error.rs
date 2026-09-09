@@ -8,12 +8,8 @@ use std::ops::{Add, AddAssign, Range};
 use darling_core::Error as DarlingError;
 use proc_macro2::{Span, TokenStream};
 use quote::{ToTokens, quote_spanned};
-#[cfg(feature = "syn1")]
-use syn1::Error as Syn1Error;
-#[cfg(feature = "syn2")]
-use syn2::Error as Syn2Error;
-#[cfg(feature = "syn3")]
-use syn3::Error as Syn3Error;
+#[cfg(feature = "syn")]
+use syn::Error as SynError;
 
 #[cfg(doc)]
 use crate::MacroOutput;
@@ -31,21 +27,9 @@ pub struct SilentError;
 #[derive(Debug)]
 #[must_use]
 pub struct Error(Vec<Box<dyn ToTokensError>>);
-#[cfg(feature = "syn1")]
-impl From<Syn1Error> for Error {
-    fn from(error: Syn1Error) -> Self {
-        Self::from(error)
-    }
-}
-#[cfg(feature = "syn2")]
-impl From<Syn2Error> for Error {
-    fn from(error: Syn2Error) -> Self {
-        Self::from(error)
-    }
-}
-#[cfg(feature = "syn3")]
-impl From<Syn3Error> for Error {
-    fn from(error: Syn3Error) -> Self {
+#[cfg(feature = "syn")]
+impl From<SynError> for Error {
+    fn from(error: SynError) -> Self {
         Self::from(error)
     }
 }
@@ -159,20 +143,8 @@ impl ToTokensError for ErrorMessage {
     }
 }
 
-#[cfg(feature = "syn1")]
-impl From<ErrorMessage> for Syn1Error {
-    fn from(value: ErrorMessage) -> Self {
-        Self::new_spanned(value.to_token_stream(), value)
-    }
-}
-#[cfg(feature = "syn2")]
-impl From<ErrorMessage> for Syn2Error {
-    fn from(value: ErrorMessage) -> Self {
-        Self::new_spanned(value.to_token_stream(), value)
-    }
-}
-#[cfg(feature = "syn3")]
-impl From<ErrorMessage> for Syn3Error {
+#[cfg(feature = "syn")]
+impl From<ErrorMessage> for SynError {
     fn from(value: ErrorMessage) -> Self {
         Self::new_spanned(value.to_token_stream(), value)
     }
@@ -399,20 +371,8 @@ impl ToTokensError for Infallible {
         unreachable!()
     }
 }
-#[cfg(feature = "syn1")]
-impl ToTokensError for Syn1Error {
-    fn to_tokens(&self, tokens: &mut TokenStream) {
-        self.to_compile_error().to_tokens(tokens);
-    }
-}
-#[cfg(feature = "syn2")]
-impl ToTokensError for Syn2Error {
-    fn to_tokens(&self, tokens: &mut TokenStream) {
-        self.to_compile_error().to_tokens(tokens);
-    }
-}
-#[cfg(feature = "syn3")]
-impl ToTokensError for Syn3Error {
+#[cfg(feature = "syn")]
+impl ToTokensError for SynError {
     fn to_tokens(&self, tokens: &mut TokenStream) {
         self.to_compile_error().to_tokens(tokens);
     }

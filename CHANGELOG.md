@@ -4,7 +4,10 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-<!-- ## [Unreleased] -->
+## [Unreleased]
+### Removed
+- **Breaking Change** Support for syn1 & syn2 supporting only syn3. This is to avoid feature clashes, as this crate can only support one version of syn at a time.
+
 ## [0.13.0] - 2026-08-03
 ### Changed
 - **Breaking Change** Updated darling to 0.24, i.e. the version compatible with syn 3.

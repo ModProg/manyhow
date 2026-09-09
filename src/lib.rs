@@ -15,7 +15,7 @@
 //! ```
 //! # use proc_macro2::TokenStream;
 //! # use quote::quote;
-//! # use syn3 as syn;
+//! # use syn as syn;
 //! use proc_macro2::TokenStream as TokenStream2;
 //!
 //! # let _ = quote!{
@@ -41,7 +41,7 @@
 //!
 //! ```
 //! # use quote::quote;
-//! # use syn3 as syn;
+//! # use syn as syn;
 //! use manyhow::manyhow;
 //! use proc_macro2::TokenStream as TokenStream2;
 //!
@@ -79,7 +79,7 @@
 //!
 //! mod module {
 //!     # use quote::quote;
-//!     # use syn3 as syn;
+//!     # use syn as syn;
 //!     use proc_macro2::TokenStream as TokenStream2;
 //!
 //!     pub fn my_macro(input: TokenStream2) -> syn::Result<TokenStream2> {
@@ -106,9 +106,10 @@
 //!
 //! When used for `proc_macro` and `proc_macro_attribute`,
 //! `#[manyhow(input_as_dummy, ...)]` will take the input of a function like
-//! `proc_macro` to initialize the [dummy `&mut TokenStream`](#
-//! dummy-mut-tokenstream) while `#[manyhow(item_as_dummy, ...)]` on
-//! `proc_macro_attribute` will initialize the dummy with the annotated item.
+//! `proc_macro` to initialize the
+//! [dummy `&mut TokenStream`](#dummy-mut-tokenstream) while
+//! `#[manyhow(item_as_dummy, ...)]` on `proc_macro_attribute` will initialize
+//! the dummy with the annotated item.
 //!
 //! You can merge the `#[proc_macro*]` attribute inside the manyhow flags e.g.,
 //! `#[manyhow(proc_macro)]` or `#[manyhow(proc_macro_derive(SomeTrait, ...))]`.
@@ -150,7 +151,7 @@
 //! ```
 //! # use proc_macro2::TokenStream;
 //! # use quote::quote;
-//! # use syn3 as syn;
+//! # use syn as syn;
 //! use proc_macro2::TokenStream as TokenStream2;
 //!
 //! # let _ = quote!{
@@ -195,7 +196,7 @@
 //!
 //! ```
 //! # use quote::quote;
-//! # use syn3 as syn;
+//! # use syn as syn;
 //! use manyhow::{Emitter, ErrorMessage, manyhow};
 //! use proc_macro2::TokenStream as TokenStream2;
 //!
@@ -224,16 +225,14 @@
 //!
 //! - `macros` **default** Enables [`#[manyhow]`](macros::manyhow) attribute
 //!   macro.
-//! - `syn`/`syn3` **default** Enables errors for [`syn` 3.x](https://docs.rs/syn/latest/syn/).
-//! - `syn2` Enables errors for [`syn` 2.x](https://docs.rs/syn/2.0.119/syn/).
-//! - `syn1` Enables errors for [`syn` 1.x](https://docs.rs/syn/1.0.109/syn/index.html).
+//! - `syn` **default** Enables errors for [`syn`](https://docs.rs/syn/latest/syn/).
 //! - `darling` Enables errors for [`darling`](https://docs.rs/darling/latest/index.html).
 
 #[cfg(feature = "macros")]
 pub use macros::manyhow;
 use proc_macro2::TokenStream;
 #[cfg(doc)]
-use {quote::ToTokens, syn3::parse::Parse};
+use {quote::ToTokens, syn::parse::Parse};
 
 extern crate proc_macro;
 
@@ -449,7 +448,7 @@ pub fn attribute<
 /// be initialized with `item`. To override assign a new `TokenStream`:
 /// ```
 /// # use proc_macro_utils::assert_tokens;
-/// # use syn3 as syn;
+/// # use syn as syn;
 /// use manyhow::{Result, SilentError, attribute};
 /// use proc_macro2::TokenStream;
 /// use quote::{ToTokens, quote};
@@ -550,7 +549,7 @@ pub fn derive<
 /// ```
 /// # use proc_macro_utils::assert_tokens;
 /// # use quote::{quote, ToTokens};
-/// # use syn3 as syn;
+/// # use syn as syn;
 /// use manyhow::{Emitter, Result, derive};
 /// use proc_macro2::TokenStream;
 /// # let item = quote!();
@@ -668,7 +667,7 @@ pub fn function<
 /// ```
 /// # use proc_macro_utils::assert_tokens;
 /// # use quote::{quote, ToTokens};
-/// # use syn3 as syn;
+/// # use syn as syn;
 /// use manyhow::{Emitter, Result, function};
 /// use proc_macro2::TokenStream;
 /// # let input = quote!();
@@ -736,38 +735,20 @@ fn function_macro() {
         );
     }
 
-    #[cfg(feature = "syn2")]
+    #[cfg(feature = "syn")]
     {
         use quote::ToTokens;
         let output: TokenStream = function!(
             #[as_dummy]
             quote!(hello;),
-            |input: syn2::LitInt| -> TokenStream { input.into_token_stream() }
+            |input: syn::LitInt| -> TokenStream { input.into_token_stream() }
         );
         assert_eq!(
             output.to_string(),
             quote!(hello; ::core::compile_error! { "expected integer literal" }).to_string()
         );
-        let output: TokenStream = function!(quote!(20), |_input: syn2::LitInt| -> syn2::Ident {
-            syn2::parse_quote!(hello)
-        });
-        assert_eq!(output.to_string(), "hello");
-    }
-
-    #[cfg(feature = "syn3")]
-    {
-        use quote::ToTokens;
-        let output: TokenStream = function!(
-            #[as_dummy]
-            quote!(hello;),
-            |input: syn3::LitInt| -> TokenStream { input.into_token_stream() }
-        );
-        assert_eq!(
-            output.to_string(),
-            quote!(hello; ::core::compile_error! { "expected integer literal" }).to_string()
-        );
-        let output: TokenStream = function!(quote!(20), |_input: syn3::LitInt| -> syn3::Ident {
-            syn3::parse_quote!(hello)
+        let output: TokenStream = function!(quote!(20), |_input: syn::LitInt| -> syn::Ident {
+            syn::parse_quote!(hello)
         });
         assert_eq!(output.to_string(), "hello");
     }
