@@ -4,7 +4,8 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+<!-- ## [Unreleased] -->
+## [0.14.0] - 2026-09-09
 ### Removed
 - **Breaking Change** Support for syn1 & syn2 supporting only syn3. This is to avoid feature clashes, as this crate can only support one version of syn at a time.
 
@@ -125,7 +126,8 @@ Only documentation changes.
 ## [v0.1.0] 
 **Initial Release**
 
-[unreleased]: https://github.com/ModProg/manyhow/compare/v0.13.0...HEAD
+[unreleased]: https://github.com/ModProg/manyhow/compare/v0.14.0...HEAD
+[0.14.0]: https://github.com/ModProg/manyhow/compare/v0.13.0...v0.14.0
 [0.13.0]: https://github.com/ModProg/manyhow/compare/v0.12.0...v0.13.0
 [0.12.0]: https://github.com/ModProg/manyhow/compare/v0.11.4...v0.12.0
 [0.11.4]: https://github.com/ModProg/manyhow/compare/v0.11.3...v0.11.4
