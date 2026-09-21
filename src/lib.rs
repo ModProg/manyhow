@@ -233,7 +233,11 @@
 pub use macros::manyhow;
 use proc_macro2::TokenStream;
 #[cfg(doc)]
-use {quote::ToTokens, syn3::parse::Parse};
+use quote::ToTokens;
+#[cfg(all(doc, feature = "syn2"))]
+use syn2::parse::Parse;
+#[cfg(all(doc, feature = "syn3"))]
+use syn3::parse::Parse;
 
 extern crate proc_macro;
 
