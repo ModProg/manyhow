@@ -5,6 +5,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 <!-- ## [Unreleased] -->
+### Fixed
+- Doc generation with the `syn2` feature enabled. ([#31](https://github.com/ModProg/manyhow/pull/31) by [apbr](https://github.com/apbr))
+
 ## [0.13.0] - 2026-08-03
 ### Changed
 - **Breaking Change** Updated darling to 0.24, i.e. the version compatible with syn 3.
