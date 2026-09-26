@@ -4,7 +4,8 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-<!-- ## [Unreleased] -->
+<!-- <!-- ## [Unreleased] -->
+## [0.13.1] - 2026-09-26 -->
 ### Fixed
 - Doc generation with the `syn2` feature enabled. ([#31](https://github.com/ModProg/manyhow/pull/31) by [apbr](https://github.com/apbr))
 
@@ -125,7 +126,8 @@ Only documentation changes.
 ## [v0.1.0] 
 **Initial Release**
 
-[unreleased]: https://github.com/ModProg/manyhow/compare/v0.13.0...HEAD
+[unreleased]: https://github.com/ModProg/manyhow/compare/v0.13.1...HEAD
+[0.13.1]: https://github.com/ModProg/manyhow/compare/v0.13.0...v0.13.1
 [0.13.0]: https://github.com/ModProg/manyhow/compare/v0.12.0...v0.13.0
 [0.12.0]: https://github.com/ModProg/manyhow/compare/v0.11.4...v0.12.0
 [0.11.4]: https://github.com/ModProg/manyhow/compare/v0.11.3...v0.11.4
