@@ -213,15 +213,15 @@ macro_rules! ensure {
 /// ```
 #[macro_export]
 macro_rules! emit {
-    ($emitter:expr, $msg:literal) => {
+    ($emitter:expr, $msg:literal) => {{
         $emitter.extend(::core::iter::once::<$crate::ErrorMessage>($crate::error_message!($msg)));
-    };
-    ($emitter:expr, $error:expr) => {
+    }};
+    ($emitter:expr, $error:expr) => {{
         $emitter.extend(::core::iter::once($error));
-    };
-    ($emitter:expr, $($tt:tt)*) => {
+    }};
+    ($emitter:expr, $($tt:tt)*) => {{
         $emitter.extend(::core::iter::once::<$crate::ErrorMessage>($crate::error_message!($($tt)*).into()));
-    };
+    }};
 }
 
 #[cfg(test)]
