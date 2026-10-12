@@ -213,15 +213,15 @@ macro_rules! ensure {
 /// ```
 #[macro_export]
 macro_rules! emit {
-    ($emitter:expr, $msg:literal) => {
+    ($emitter:expr, $msg:literal) => {{
         $emitter.extend(::core::iter::once::<$crate::ErrorMessage>($crate::error_message!($msg)));
-    };
-    ($emitter:expr, $error:expr) => {
+    }};
+    ($emitter:expr, $error:expr) => {{
         $emitter.extend(::core::iter::once($error));
-    };
-    ($emitter:expr, $($tt:tt)*) => {
+    }};
+    ($emitter:expr, $($tt:tt)*) => {{
         $emitter.extend(::core::iter::once::<$crate::ErrorMessage>($crate::error_message!($($tt)*).into()));
-    };
+    }};
 }
 
 #[cfg(test)]
@@ -299,7 +299,10 @@ mod test {
         let mut emitter = Emitter::new();
         emit!(emitter, "an error message"; error = "with attachments");
         let span = proc_macro2::Span::call_site();
-        emit!(emitter, span, "error message");
+        // explicitly use `emit` in an expression position
+        match () {
+            () => emit!(emitter, span, "error message"),
+        }
         #[cfg(feature = "syn")]
         {
             let error = syn::Error::new(proc_macro2::Span::call_site(), "an error");
