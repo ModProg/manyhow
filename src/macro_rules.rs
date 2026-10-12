@@ -299,7 +299,10 @@ mod test {
         let mut emitter = Emitter::new();
         emit!(emitter, "an error message"; error = "with attachments");
         let span = proc_macro2::Span::call_site();
-        emit!(emitter, span, "error message");
+        // explicitly use `emit` in an expression position
+        match () {
+            () => emit!(emitter, span, "error message"),
+        }
         #[cfg(feature = "syn")]
         {
             let error = syn::Error::new(proc_macro2::Span::call_site(), "an error");
