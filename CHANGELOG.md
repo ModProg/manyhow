@@ -4,7 +4,10 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-<!-- ## [Unreleased] -->
+## [Unreleased]
+### Fixed
+- fix "trailing semicolon in macro used in expression position" for `emit!` [#32](https://github.com/ModProg/manyhow/pull/32) by [Daniel Schemmel](https://github.com/danielschemmel)
+
 ## [0.14.0] - 2026-09-09
 ### Removed
 - **Breaking Change** Support for syn1 & syn2 supporting only syn3. This is to avoid feature clashes, as this crate can only support one version of syn at a time.
